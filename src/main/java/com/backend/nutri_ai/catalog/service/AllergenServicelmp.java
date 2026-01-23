@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 @Service
@@ -112,8 +113,10 @@ public class AllergenServicelmp implements IAllergenService {
         response.setId(allergen.getId());
         response.setCode(allergen.getCode());
         response.setName(allergen.getName());
-        response.setCreatedAt(LocalDateTime.from(allergen.getCreatedAt()));
-        response.setUpdatedAt(LocalDateTime.from(allergen.getUpdatedAt()));
+        response.setCreatedAt(allergen.getCreatedAt() != null ?
+                allergen.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null);
+        response.setUpdatedAt(allergen.getUpdatedAt() != null ?
+                allergen.getUpdatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null);
         return response;
     }
 

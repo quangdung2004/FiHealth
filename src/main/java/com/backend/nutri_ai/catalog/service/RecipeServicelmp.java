@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -152,8 +153,10 @@ public class RecipeServicelmp implements IRecipeService {
         response.setEstimatedCostVnd(recipe.getEstimatedCostVnd());
         response.setTags(recipe.getTags());
         response.setActive(recipe.getActive());
-        response.setCreatedAt(LocalDateTime.from(recipe.getCreatedAt()));
-        response.setUpdatedAt(LocalDateTime.from(recipe.getUpdatedAt()));
+        response.setCreatedAt(recipe.getCreatedAt() != null ?
+                recipe.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null);
+        response.setUpdatedAt(recipe.getUpdatedAt() != null ?
+                recipe.getUpdatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null);
 
         // Map ingredients
         if (recipe.getIngredients() != null) {

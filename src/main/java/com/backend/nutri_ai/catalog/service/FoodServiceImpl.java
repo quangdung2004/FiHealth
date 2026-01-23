@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -100,8 +101,10 @@ public class FoodServiceImpl implements IFoodService {
         response.setEstimatedPriceVndPerServing(food.getEstimatedPriceVndPerServing());
         response.setTags(food.getTags());
         response.setActive(food.getActive());
-        response.setCreatedAt(LocalDateTime.from(food.getCreatedAt()));
-        response.setUpdatedAt(LocalDateTime.from(food.getUpdatedAt()));
+        response.setCreatedAt(food.getCreatedAt() != null ?
+                food.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null);
+        response.setUpdatedAt(food.getUpdatedAt() != null ?
+                food.getUpdatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null);
 
         if (food.getAllergens() != null) {
             response.setAllergens(
