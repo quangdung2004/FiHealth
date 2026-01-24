@@ -31,8 +31,10 @@ public class NutritionAssessment extends BaseEntity {
     @Column(nullable=false) private Integer heightCm;
     @Column(nullable=false) private Double weightKg;
 
-    @Enumerated(EnumType.STRING) @Column(nullable=false, length=20)
+    @Enumerated(EnumType.STRING)
+    @Column(name="activity_level", nullable=false, length=30)
     private ActivityLevel activityLevel;
+
 
     @Enumerated(EnumType.STRING) @Column(nullable=false, length=20)
     private Goal goal;
