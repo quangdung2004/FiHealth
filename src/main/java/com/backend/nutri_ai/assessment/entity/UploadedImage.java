@@ -17,6 +17,8 @@ public class UploadedImage extends BaseEntity {
     @ManyToOne(fetch=FetchType.LAZY)
     @JoinColumn(name="user_id", nullable=false, columnDefinition="BINARY(16)")
     private AppUser user;
+//      @Column(name="user_id", nullable=false)
+//      private UUID userId; // MVP: chưa làm auth thì truyền tạm; sau đổi ManyToOne AppUser
 
     @OneToOne(fetch=FetchType.LAZY)
     @JoinColumn(name="assessment_id", unique=true, columnDefinition="BINARY(16)")
