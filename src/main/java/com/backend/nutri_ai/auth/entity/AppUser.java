@@ -14,10 +14,11 @@ import java.time.Instant;
         @Index(name="ux_user_email", columnList="email", unique=true)
 })
 @Getter @Setter
-public class AppUser extends BaseEntity {
+    public class AppUser extends BaseEntity {
     @Column(nullable=false, length=120)
     private String email;
-
+    @Column(nullable=false, length=120)
+    private String FullName;
     @Column(nullable=false, length=200)
     private String passwordHash;
 

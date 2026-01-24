@@ -33,7 +33,29 @@ spring:
       chat:
         options:
           model: openai/gpt-4o-mini
+  redis:
+    host: localhost
+    port: 6379
+    timeout: 60000
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: your_email@gmail.com
+    password: your_app_password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 logging:
   level:
     org.hibernate.SQL: debug
+jwt:
+  secret: a1b31e357b84889fbccfe46570e46aa3bcd90455b308e3eb65f3f5f4b7dde504
+  access-token-expiration: 3600000      # Đã sửa từ 'expire' thành 'expiration'
+  refresh-token-expiration: 604800000   # Mình khuyên sửa luôn cái này cho đồng bộ, kiểm tra lại code Java xem nó gọi tên là gì  # 7 days
+
+
