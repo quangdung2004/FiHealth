@@ -7,28 +7,38 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 @Entity
-@Table(name="workout_plan", indexes = {@Index(name="idx_workoutplan_user", columnList="user_id")})
+@Table(name = "workout_plan", indexes = {
+        @Index(name = "idx_plan_user", columnList = "user_id"),
+        @Index(name = "idx_plan_assessment", columnList = "assessment_id")
+})
 @Getter
 @Setter
 public class WorkoutPlan extends BaseEntity {
-    @ManyToOne(fetch=FetchType.LAZY)
-    @JoinColumn(name="user_id", nullable=false, columnDefinition="BINARY(16)")
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, columnDefinition = "BINARY(16)")
     private AppUser user;
 
-    @OneToOne(fetch=FetchType.LAZY)
-    @JoinColumn(name="assessment_id", nullable=false, unique=true, columnDefinition="BINARY(16)")
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assessment_id", nullable = false, columnDefinition = "BINARY(16)")
     private NutritionAssessment assessment;
 
-    @Column(nullable=false) private Integer daysPerWeek;
+    @Column(nullable = false)
+    private Integer daysPerWeek;
 
-    @Lob @Column(columnDefinition="TEXT")
-    private String aiRawJson;
+    @Column(nullable = false)
+    private Integer totalWeeks; // e.g. 4, 8, 12
 
-    @OneToMany(mappedBy="plan", cascade=CascadeType.ALL, orphanRemoval=true)
+    @Column(columnDefinition = "TEXT")
+    private String aiRawJson; // Store raw AI response if needed later
+
+    @Column(nullable = false)
+    private String status = "ACTIVE"; // ACTIVE, COMPLETED, ARCHIVED
+
+    @OneToMany(mappedBy = "workoutPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<WorkoutDay> days = new ArrayList<>();
 }
-
