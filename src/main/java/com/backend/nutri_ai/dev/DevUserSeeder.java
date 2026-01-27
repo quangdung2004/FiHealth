@@ -7,6 +7,7 @@ import com.backend.nutri_ai.common.enums.UserStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,6 +17,7 @@ public class DevUserSeeder implements CommandLineRunner {
 
     public static final String DEV_EMAIL = "dev@local";
     private static final String DEV_PASSWORD_HASH = "{noop}dev";
+    private final PasswordEncoder passwordEncoder;
     private final AppUserRepository userRepository;
 
     @Override
@@ -26,9 +28,9 @@ public class DevUserSeeder implements CommandLineRunner {
                 },
                 () -> {
                     AppUser dev = new AppUser();
+                    dev.setFullName("DEV User");
                     dev.setEmail(DEV_EMAIL);
-                    dev.setPasswordHash(DEV_PASSWORD_HASH);
-                    dev.setFullName("Nguyễn Văn A");
+                    dev.setPasswordHash(passwordEncoder.encode(DEV_PASSWORD_HASH));
                     dev.setRole(UserRole.USER); // hoặc USER
                     dev.setStatus(UserStatus.ACTIVE);
                     userRepository.save(dev);

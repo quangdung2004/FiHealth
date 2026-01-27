@@ -56,8 +56,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     )
                     .orElseThrow(() -> new DisabledException("User blocked"));
 
-            var authentication = new UsernamePasswordAuthenticationToken(
-                    user.getId(),
+            var auth = new UsernamePasswordAuthenticationToken(
+                    userId,
                     null,
                     List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
             );
