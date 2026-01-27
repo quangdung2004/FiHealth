@@ -40,6 +40,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String userId = jwtService.extractUserId(token);
             String role = jwtService.extractRole(token);
 
+            // tránh tạo auth với dữ liệu null/blank
+            if (userId == null || userId.isBlank() || role == null || role.isBlank()) {
+                SecurityContextHolder.clearContext();
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             var auth = new UsernamePasswordAuthenticationToken(
                     userId,
                     null,

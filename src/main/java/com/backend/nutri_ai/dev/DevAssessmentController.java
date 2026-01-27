@@ -7,10 +7,11 @@ import com.backend.nutri_ai.dev.dto.DevAssessmentCreateRequest;
 import com.backend.nutri_ai.dev.dto.DevAssessmentResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/dev/assessments")
+@RequestMapping("/api/dev/assessments")
 @RequiredArgsConstructor
 @Profile({"dev", "default"}) // chỉ mở trong dev/default
 public class DevAssessmentController {
@@ -18,26 +19,28 @@ public class DevAssessmentController {
     private final DevAssessmentService service;
 
     @PostMapping
-    public ApiResponse<DevAssessmentResponse> create(
+    public ResponseEntity<ApiResponse<DevAssessmentResponse>> create(
             @RequestBody(required = false) DevAssessmentCreateRequest req
     ) {
         NutritionAssessment a = service.createForDevUser(req);
-        return ApiResponse.ok("Dev assessment created",
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Dev assessment created",
                 DevAssessmentResponse.builder().assessmentId(a.getId()).build()
-        );
+        ));
     }
 
 
     @GetMapping("/latest")
-    public ApiResponse<DevAssessmentResponse> latest() {
+    public ResponseEntity<ApiResponse<DevAssessmentResponse>> latest() {
         NutritionAssessment a = service.latestForDevUserOrNull();
         if (a == null) {
-            throw new ResourceNotFoundException("DEV_ASSESSMENT_NOT_FOUND", "No dev assessment found");
+            throw new ResourceNotFoundException(
+                    "No assessment found for DEV user");
         }
-        return ApiResponse.ok(
+        return ResponseEntity.ok(ApiResponse.ok(
                 DevAssessmentResponse.builder()
                         .assessmentId(a.getId())
                         .build()
-        );
+        ));
     }
 }

@@ -1,7 +1,7 @@
-package com.backend.nutri_ai.auth.Exceptions;
+package com.backend.nutri_ai.common.exception;
 
 
-import com.backend.nutri_ai.auth.constant.ErrorCode;
+import com.backend.nutri_ai.common.enums.ErrorCode;
 import lombok.Getter;
 
 @Getter
