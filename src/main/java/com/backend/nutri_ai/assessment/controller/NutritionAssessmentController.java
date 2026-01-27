@@ -4,8 +4,6 @@ import com.backend.nutri_ai.assessment.dto.CreateAssessmentRequest;
 import com.backend.nutri_ai.assessment.entity.NutritionAssessment;
 import com.backend.nutri_ai.assessment.service.NutritionAssessmentService;
 import com.backend.nutri_ai.auth.entity.AppUser;
-import com.backend.nutri_ai.auth.repo.AppUserRepo;
-import com.backend.nutri_ai.common.exception.ResourceNotFoundException;
 import com.backend.nutri_ai.auth.repository.AppUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -54,11 +52,6 @@ public class NutritionAssessmentController {
             Authentication authentication,
             @RequestBody CreateAssessmentRequest req
     ) {
-        String username = principal.getName(); // user đang login
-
-        AppUser user = appUserRepo.findByEmail(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
         AppUser user = currentUser(authentication);
         return assessmentService.createFullAssessment(user, req);
     }
@@ -85,6 +78,3 @@ public class NutritionAssessmentController {
         return assessmentService.getById(id, user);
     }
 }
-
-
-
