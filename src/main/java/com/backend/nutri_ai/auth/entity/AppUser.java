@@ -34,7 +34,8 @@ import java.time.Instant;
 
     @Column(length=300)
     private String blockedReason;
-
+    @Column(nullable = false)
+    private Integer tokenVersion = 0;
     @OneToOne(mappedBy="user", cascade=CascadeType.ALL, orphanRemoval=true, fetch=FetchType.LAZY)
     private UserProfile profile;
 }

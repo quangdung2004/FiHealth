@@ -1,4 +1,4 @@
-package com.backend.nutri_ai.auth.dto.response;
+package com.backend.nutri_ai.auth.dto.response.auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

@@ -28,6 +28,7 @@ public class DevUserSeeder implements CommandLineRunner {
                     AppUser dev = new AppUser();
                     dev.setEmail(DEV_EMAIL);
                     dev.setPasswordHash(DEV_PASSWORD_HASH);
+                    dev.setFullName("Nguyễn Văn A");
                     dev.setRole(UserRole.USER); // hoặc USER
                     dev.setStatus(UserStatus.ACTIVE);
                     userRepository.save(dev);

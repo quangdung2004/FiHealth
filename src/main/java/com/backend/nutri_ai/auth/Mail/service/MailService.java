@@ -8,4 +8,5 @@ public interface MailService {
     void sendResetPasswordMail(String to, String otp);
 
     void sendActivationMail(String to, String activationLink);
+    public void sendNewPasswordMail(String to, String newPassword);
 }

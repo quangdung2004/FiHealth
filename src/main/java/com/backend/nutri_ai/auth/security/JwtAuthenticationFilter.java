@@ -1,10 +1,15 @@
 package com.backend.nutri_ai.auth.security;
 
+import com.backend.nutri_ai.auth.constant.SecurityConstant;
+import com.backend.nutri_ai.auth.entity.AppUser;
+import com.backend.nutri_ai.auth.repository.AppUserRepository;
+import com.backend.nutri_ai.common.enums.UserStatus;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -13,12 +18,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final AppUserRepository userRepo;
 
     @Override
     protected void doFilterInternal(
@@ -27,31 +34,43 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String authHeader = request.getHeader("Authorization");
+        String header = request.getHeader(SecurityConstant.AUTH_HEADER);
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        if (header == null || !header.startsWith(SecurityConstant.TOKEN_PREFIX)) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = authHeader.substring(7);
+        String token = header.substring(SecurityConstant.TOKEN_PREFIX.length());
 
         try {
-            String userId = jwtService.extractUserId(token);
-            String role = jwtService.extractRole(token);
+            UUID userId = jwtService.extractUserId(token);
+            Integer tokenVersion = jwtService.extractTokenVersion(token);
 
-            var auth = new UsernamePasswordAuthenticationToken(
-                    userId,
+            // NOTE: CHECK DB MỖI REQUEST
+            AppUser user = userRepo
+                    .findByIdAndStatusAndTokenVersion(
+                            userId,
+                            UserStatus.ACTIVE,
+                            tokenVersion
+                    )
+                    .orElseThrow(() -> new DisabledException("User blocked"));
+
+            var authentication = new UsernamePasswordAuthenticationToken(
+                    user.getId(),
                     null,
-                    List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                    List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
             );
 
-            SecurityContextHolder.getContext().setAuthentication(auth);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        } catch (Exception ex) {
+        } catch (Exception e) {
             SecurityContextHolder.clearContext();
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
         }
 
         filterChain.doFilter(request, response);
     }
 }
+

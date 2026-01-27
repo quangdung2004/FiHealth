@@ -5,7 +5,7 @@ import com.backend.nutri_ai.auth.config.JwtConfig;
 import com.backend.nutri_ai.auth.constant.MailConstant;
 import com.backend.nutri_ai.auth.constant.SecurityConstant;
 import com.backend.nutri_ai.auth.dto.request.Auth.*;
-import com.backend.nutri_ai.auth.dto.response.AuthResponse;
+import com.backend.nutri_ai.auth.dto.response.auth.AuthResponse;
 import com.backend.nutri_ai.auth.entity.AppUser;
 import com.backend.nutri_ai.auth.entity.RefreshToken;
 import com.backend.nutri_ai.auth.repository.RefreshTokenRepository;
@@ -18,6 +18,8 @@ import com.backend.nutri_ai.auth.constant.ErrorCode;
 import com.backend.nutri_ai.auth.constant.RedisKey;
 import com.backend.nutri_ai.auth.Mail.service.MailService;
 import com.backend.nutri_ai.auth.service.inf.redis.RedisService;
+import com.backend.nutri_ai.auth.util.generateRandomPassword;
+import com.backend.nutri_ai.common.enums.UserRole;
 import com.backend.nutri_ai.common.enums.UserStatus;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -75,6 +77,7 @@ public class AuthService implements IAuthService {
         user.setEmail(request.getEmail());
         user.setFullName(request.getFullName());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setRole(UserRole.USER);
         user.setStatus(UserStatus.VERIFY);
 
         userRepository.save(user);
@@ -147,8 +150,9 @@ public class AuthService implements IAuthService {
 
     /* ================= RESET PASSWORD ================= */
 
+    @Override
     public void resetPassword(ResetPasswordRequest request) {
-
+        // 1. Kiểm tra OTP từ Redis
         String key = RedisKey.RESET_PASSWORD_OTP + request.getEmail();
         String cachedOtp = redisService.get(key);
 
@@ -156,12 +160,21 @@ public class AuthService implements IAuthService {
             throw new AppException(ErrorCode.INVALID_OTP);
         }
 
+        // 2. Lấy User từ DB
         AppUser user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        // 3. Sử dụng Util để sinh mật khẩu ngẫu nhiên (Ví dụ: A8kMz9Lp2q)
+        String newRandomPassword = generateRandomPassword.generate();
+
+        // 4. Mã hóa và lưu mật khẩu mới vào Database
+        user.setPasswordHash(passwordEncoder.encode(newRandomPassword));
         userRepository.save(user);
 
+        // 5. Gửi email chứa mật khẩu mới cho user
+        mailService.sendNewPasswordMail(user.getEmail(), newRandomPassword);
+
+        // 6. Xóa OTP sau khi hoàn tất
         redisService.delete(key);
     }
 

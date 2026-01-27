@@ -1,5 +1,5 @@
 package com.backend.nutri_ai.auth.constant;
-public final class SecurityConstant {
+public final class   SecurityConstant {
 
     private SecurityConstant() {}
 

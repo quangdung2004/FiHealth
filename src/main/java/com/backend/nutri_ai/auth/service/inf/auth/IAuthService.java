@@ -1,7 +1,7 @@
 package com.backend.nutri_ai.auth.service.inf.auth;
 
 import com.backend.nutri_ai.auth.dto.request.Auth.*;
-import com.backend.nutri_ai.auth.dto.response.AuthResponse;
+import com.backend.nutri_ai.auth.dto.response.auth.AuthResponse;
 
 public interface IAuthService {
     AuthResponse login(LoginRequest request);
