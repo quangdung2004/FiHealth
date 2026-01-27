@@ -56,8 +56,8 @@ public class NutritionAssessment extends BaseEntity {
     @OneToOne(mappedBy="assessment", cascade=CascadeType.ALL, orphanRemoval=true, fetch=FetchType.LAZY)
     private BodyImageAnalysis bodyAnalysis;
 
-    @OneToOne(mappedBy="assessment", cascade=CascadeType.ALL, orphanRemoval=true, fetch=FetchType.LAZY)
-    private MealPlan mealPlan;
+    @OneToMany(mappedBy="assessment", fetch = FetchType.LAZY)
+    private java.util.List<MealPlan> mealPlans = new java.util.ArrayList<>();
 
     @OneToOne(mappedBy="assessment", cascade=CascadeType.ALL, orphanRemoval=true, fetch=FetchType.LAZY)
     private WorkoutPlan workoutPlan;

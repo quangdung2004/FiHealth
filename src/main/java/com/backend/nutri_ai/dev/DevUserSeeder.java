@@ -30,6 +30,7 @@ public class DevUserSeeder implements CommandLineRunner {
                     dev.setPasswordHash(DEV_PASSWORD_HASH);
                     dev.setRole(UserRole.USER); // hoặc USER
                     dev.setStatus(UserStatus.ACTIVE);
+                    dev.setFullName("Dev User");
                     userRepository.save(dev);
 
                     System.out.println("✅ Dev user created: " + DEV_EMAIL);
