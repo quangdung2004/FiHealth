@@ -33,6 +33,7 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/api/admin/foods/**",
                                 "/api/admin/foods/**",
+                                "/api/admin/workouts/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")

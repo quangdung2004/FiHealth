@@ -6,41 +6,32 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "workout_item",
-        indexes = {
-                @Index(name = "idx_workout_item_day", columnList = "day_id"),
-                @Index(name = "idx_workout_item_catalog", columnList = "workout_catalog_id")
-        })
+@Table(name = "workout_item", indexes = {
+                @Index(name = "idx_item_day", columnList = "day_id"),
+                @Index(name = "idx_item_catalog", columnList = "catalog_id")
+})
 @Getter
 @Setter
 public class WorkoutItem extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "day_id", nullable = false, columnDefinition = "BINARY(16)")
-    private WorkoutDay day;
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "day_id", nullable = false, columnDefinition = "BINARY(16)")
+        private WorkoutDay workoutDay;
 
-    @Column(name = "item_order", nullable = false)
-    private Integer itemOrder;
+        @ManyToOne(fetch = FetchType.EAGER)
+        @JoinColumn(name = "catalog_id", nullable = false, columnDefinition = "BINARY(16)")
+        private WorkoutCatalog workoutCatalog;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "workout_catalog_id", nullable = false, columnDefinition = "BINARY(16)")
-    private WorkoutCatalog workoutCatalog;
+        @Column(nullable = false)
+        private Integer orderIndex; // To sort exercises within a day
 
-    @Column(name = "sets_count")
-    private Integer sets;
+        private Integer sets;
+        private Integer reps; // e.g. 10 or 12
+        private Integer durationSec; // e.g. 60 (for plank)
+        private Integer restSec;
 
-    @Column(name = "reps_per_set")
-    private Integer reps;
+        @Column(length = 500)
+        private String note; // Form cues or specific instructions
 
-    @Column(name = "duration_sec")
-    private Integer durationSec;
-
-    @Column(name = "rest_sec")
-    private Integer restSec;
-
-    @Column(name = "intensity", length = 50)
-    private String intensity;
-
-    @Column(name = "notes", length = 500)
-    private String notes;
+        private Boolean completed = false;
 }
