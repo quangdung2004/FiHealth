@@ -47,7 +47,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             UUID userId = jwtService.extractUserId(token);
             Integer tokenVersion = jwtService.extractTokenVersion(token);
 
-            // NOTE: CHECK DB MỖI REQUEST
             AppUser user = userRepo
                     .findByIdAndStatusAndTokenVersion(
                             userId,
@@ -56,13 +55,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     )
                     .orElseThrow(() -> new DisabledException("User blocked"));
 
-            var auth = new UsernamePasswordAuthenticationToken(
-                    userId,
+            var authentication = new UsernamePasswordAuthenticationToken(
+                    user.getId(),
                     null,
                     List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
             );
 
-//            SecurityContextHolder.getContext().setAuthentication(authentication);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
         } catch (Exception e) {
             SecurityContextHolder.clearContext();
