@@ -73,6 +73,11 @@ public class FoodServiceImpl implements IFoodService {
         FoodItem food = foodRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Food not found with id: " + id));
 
+        if (foodRepository.existsByNameAndIdNot(request.getName(), id)) {
+            throw new com.backend.nutri_ai.common.exception.DuplicatedResourceException(
+                    "Food with name '" + request.getName() + "' already exists");
+        }
+
         // map request -> entity (update)
         foodMapper.updateEntity(food, request);
 

@@ -26,4 +26,6 @@ public interface IFoodRepository extends JpaRepository<FoodItem, UUID> {
         Page<FoodItem> findByNameOrTagsContaining(@Param("q") String query, Pageable pageable);
 
         boolean existsByName(String name);
+
+    boolean existsByNameAndIdNot(String name, UUID id);
 }

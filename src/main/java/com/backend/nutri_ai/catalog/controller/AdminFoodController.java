@@ -27,6 +27,11 @@ public class AdminFoodController {
                 HttpStatus.CREATED);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<FoodResponse>> getFoodById(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.ok("Food detail", foodService.getFoodById(id)));
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<FoodResponse>> updateFood(
             @PathVariable UUID id,
