@@ -1,5 +1,6 @@
 package com.backend.nutri_ai.workout.controller;
 
+import com.backend.nutri_ai.common.ApiResponse;
 import com.backend.nutri_ai.workout.dto.response.WorkoutPlanResponse;
 import com.backend.nutri_ai.workout.service.IWorkoutService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,16 +22,16 @@ public class WorkoutController {
 
     @Operation(summary = "Generate workout plan from assessment")
     @PostMapping("/recommend")
-    public ResponseEntity<WorkoutPlanResponse> generatePlan(
+    public ResponseEntity<ApiResponse<WorkoutPlanResponse>> generatePlan(
             @RequestParam UUID assessmentId) {
         return new ResponseEntity<>(
-                workoutService.generateWorkoutPlan(assessmentId),
+                ApiResponse.ok("Workout plan generated", workoutService.generateWorkoutPlan(assessmentId)),
                 HttpStatus.CREATED);
     }
 
     @Operation(summary = "Get workout plan details")
     @GetMapping("/{id}")
-    public ResponseEntity<WorkoutPlanResponse> getPlan(@PathVariable UUID id) {
-        return ResponseEntity.ok(workoutService.getWorkoutPlan(id));
+    public ResponseEntity<ApiResponse<WorkoutPlanResponse>> getPlan(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.ok(workoutService.getWorkoutPlan(id)));
     }
 }

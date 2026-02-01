@@ -1,5 +1,6 @@
 package com.backend.nutri_ai.workout.controller;
 
+import com.backend.nutri_ai.common.ApiResponse;
 import com.backend.nutri_ai.common.enums.WorkoutLevel;
 import com.backend.nutri_ai.common.enums.WorkoutType;
 import com.backend.nutri_ai.workout.dto.request.WorkoutCatalogRequest;
@@ -28,42 +29,42 @@ public class AdminWorkoutController {
 
     @Operation(summary = "Search workout catalog")
     @GetMapping
-    public ResponseEntity<Page<WorkoutCatalogResponse>> searchCatalog(
+    public ResponseEntity<ApiResponse<Page<WorkoutCatalogResponse>>> searchCatalog(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) Boolean active,
             @RequestParam(required = false) WorkoutLevel level,
             @RequestParam(required = false) WorkoutType type,
             @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(workoutService.searchCatalog(q, active, level, type, pageable));
+        return ResponseEntity.ok(ApiResponse.ok(workoutService.searchCatalog(q, active, level, type, pageable)));
     }
 
     @Operation(summary = "Create workout item")
     @PostMapping
-    public ResponseEntity<WorkoutCatalogResponse> createWorkout(
+    public ResponseEntity<ApiResponse<WorkoutCatalogResponse>> createWorkout(
             @Valid @RequestBody WorkoutCatalogRequest request) {
         return new ResponseEntity<>(
-                workoutService.createCatalogItem(request),
+                ApiResponse.ok("Workout item created", workoutService.createCatalogItem(request)),
                 HttpStatus.CREATED);
     }
 
     @Operation(summary = "Update workout item")
     @PutMapping("/{id}")
-    public ResponseEntity<WorkoutCatalogResponse> updateWorkout(
+    public ResponseEntity<ApiResponse<WorkoutCatalogResponse>> updateWorkout(
             @PathVariable UUID id,
             @Valid @RequestBody WorkoutCatalogRequest request) {
-        return ResponseEntity.ok(workoutService.updateCatalogItem(id, request));
+        return ResponseEntity.ok(ApiResponse.ok("Workout item updated", workoutService.updateCatalogItem(id, request)));
     }
 
     @Operation(summary = "Delete workout item")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteWorkout(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<Void>> deleteWorkout(@PathVariable UUID id) {
         workoutService.deleteCatalogItem(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.ok("Workout item deleted", null));
     }
 
     @Operation(summary = "Get workout item details")
     @GetMapping("/{id}")
-    public ResponseEntity<WorkoutCatalogResponse> getWorkout(@PathVariable UUID id) {
-        return ResponseEntity.ok(workoutService.getCatalogItem(id));
+    public ResponseEntity<ApiResponse<WorkoutCatalogResponse>> getWorkout(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.ok(workoutService.getCatalogItem(id)));
     }
 }

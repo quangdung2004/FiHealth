@@ -3,6 +3,7 @@ package com.backend.nutri_ai.catalog.controller;
 import com.backend.nutri_ai.catalog.dto.request.FoodRequest;
 import com.backend.nutri_ai.catalog.dto.response.FoodResponse;
 import com.backend.nutri_ai.catalog.service.IFoodService;
+import com.backend.nutri_ai.common.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,28 +20,24 @@ public class AdminFoodController {
     private final IFoodService foodService;
 
     @PostMapping
-    public ResponseEntity<FoodResponse> createFood(
-            @Valid @RequestBody FoodRequest request
-    ) {
+    public ResponseEntity<ApiResponse<FoodResponse>> createFood(
+            @Valid @RequestBody FoodRequest request) {
         return new ResponseEntity<>(
-                foodService.createFood(request),
-                HttpStatus.CREATED
-        );
+                ApiResponse.ok("Food created", foodService.createFood(request)),
+                HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<FoodResponse> updateFood(
+    public ResponseEntity<ApiResponse<FoodResponse>> updateFood(
             @PathVariable UUID id,
-            @Valid @RequestBody FoodRequest request
-    ) {
+            @Valid @RequestBody FoodRequest request) {
         return ResponseEntity.ok(
-                foodService.updateFood(id, request)
-        );
+                ApiResponse.ok("Food updated", foodService.updateFood(id, request)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteFood(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<Void>> deleteFood(@PathVariable UUID id) {
         foodService.deleteFood(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.ok("Food deleted", null));
     }
 }

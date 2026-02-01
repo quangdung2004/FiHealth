@@ -3,6 +3,7 @@ package com.backend.nutri_ai.catalog.controller;
 import com.backend.nutri_ai.catalog.dto.request.FoodRequest;
 import com.backend.nutri_ai.catalog.dto.response.FoodResponse;
 import com.backend.nutri_ai.catalog.service.IFoodService;
+import com.backend.nutri_ai.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -26,15 +27,15 @@ public class FoodController {
 
     @Operation(summary = "Search foods")
     @GetMapping("/search")
-    public ResponseEntity<Page<FoodResponse>> searchFoods(
+    public ResponseEntity<ApiResponse<Page<FoodResponse>>> searchFoods(
             @RequestParam(required = false) String q,
             @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(foodService.searchFoods(q, pageable));
+        return ResponseEntity.ok(ApiResponse.ok(foodService.searchFoods(q, pageable)));
     }
 
     @Operation(summary = "Get food by ID")
     @GetMapping("/{id}")
-    public ResponseEntity<FoodResponse> getFoodById(@PathVariable UUID id) {
-        return ResponseEntity.ok(foodService.getFoodById(id));
+    public ResponseEntity<ApiResponse<FoodResponse>> getFoodById(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.ok(foodService.getFoodById(id)));
     }
 }
