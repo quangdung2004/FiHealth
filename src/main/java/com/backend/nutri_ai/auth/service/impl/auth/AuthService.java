@@ -21,13 +21,18 @@ import com.backend.nutri_ai.auth.service.inf.redis.RedisService;
 import com.backend.nutri_ai.auth.util.generateRandomPassword;
 import com.backend.nutri_ai.common.enums.UserRole;
 import com.backend.nutri_ai.common.enums.UserStatus;
+import com.backend.nutri_ai.common.exception.UnauthorizedException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.Authentication;
+
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -238,5 +243,23 @@ public class AuthService implements IAuthService {
                 "1",
                 Duration.ofMinutes(1)
         );
+    }
+    public AppUser getAuthenticatedUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new UnauthorizedException("Chưa đăng nhập");
+        }
+
+        Object principal = auth.getPrincipal(); // bạn set principal = user.getId() (UUID)
+        UUID userId;
+        try {
+            if (principal instanceof UUID id) userId = id;
+            else userId = UUID.fromString(String.valueOf(principal));
+        } catch (Exception e) {
+            throw new UnauthorizedException("Token không hợp lệ");
+        }
+
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new UnauthorizedException("User không tồn tại"));
     }
 }
