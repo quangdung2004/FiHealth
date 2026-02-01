@@ -48,7 +48,11 @@ spring:
     redis:
       host: localhost
       port: 6379
+      password: nutrition # Thêm mật khẩu vào đây
       timeout: 60000
+      lettuce:
+        client-options:
+          protocol-version: RESP2 # Thêm dòng này nếu vẫn bị lỗi HELLO sau khi nhập pass
   rabbitmq:
     host: localhost
     port: 5672

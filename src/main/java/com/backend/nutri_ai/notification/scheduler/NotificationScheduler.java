@@ -27,13 +27,7 @@ public class NotificationScheduler {
     private final AppUserRepository userRepo;
     private final EmailProducer producer;
 
-    /**
-     * Chạy mỗi 60s
-     * - Lấy notification active + đến giờ gửi
-     * - Lọc user ACTIVE theo group
-     * - Đảm bảo mỗi user chỉ nhận 1 lần / notification
-     * - Push sang RabbitMQ (không gửi mail trực tiếp)
-     */
+
     @Scheduled(fixedRate = 60_000)
     public void dispatch() {
 
