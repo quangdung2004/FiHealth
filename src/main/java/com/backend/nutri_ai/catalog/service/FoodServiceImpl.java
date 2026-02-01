@@ -27,12 +27,16 @@ public class FoodServiceImpl implements IFoodService {
     // ================= SEARCH =================
     @Override
     public Page<FoodResponse> searchFoods(String query, Pageable pageable) {
-        Page<FoodItem> page = foodRepository.searchFoods(query, true, pageable);
+        Page<FoodItem> page = foodRepository.searchFoods(query, null, pageable);
+
         if (page.isEmpty()) {
             throw new ResourceNotFoundException("No foods found matching query: " + query);
         }
+
         return page.map(foodMapper::toResponse);
     }
+
+
 
     // ================= GET BY ID =================
     @Override
