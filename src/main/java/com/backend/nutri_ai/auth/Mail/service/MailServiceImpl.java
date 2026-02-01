@@ -60,19 +60,23 @@ public class MailServiceImpl implements MailService {
 
         sendHtml(to, subject, htmlContent);
     }
-
+    @Override
+    public void sendHtmlMail(String to, String subject, String html) {
+        sendHtml(to, subject, html);
+    }
     private void sendHtml(String to, String subject, String html) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            MimeMessage msg = mailSender.createMimeMessage();
+            MimeMessageHelper helper =
+                    new MimeMessageHelper(msg, true, "UTF-8");
 
             helper.setTo(to);
             helper.setSubject(subject);
-            helper.setText(html, true); // true = bật chế độ HTML
+            helper.setText(html, true);
 
-            mailSender.send(message);
+            mailSender.send(msg);
         } catch (Exception e) {
-            throw new RuntimeException("Gửi mail thất bại: " + e.getMessage());
+            throw new RuntimeException("Send mail failed", e);
         }
     }
 }

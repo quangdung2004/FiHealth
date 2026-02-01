@@ -11,7 +11,7 @@ import com.backend.nutri_ai.auth.entity.RefreshToken;
 import com.backend.nutri_ai.auth.repository.RefreshTokenRepository;
 import com.backend.nutri_ai.auth.repository.UserRepository;
 import com.backend.nutri_ai.auth.security.JwtService;
-import com.backend.nutri_ai.common.exception.AppException;
+import com.backend.nutri_ai.common.exception.*;
 import com.backend.nutri_ai.auth.service.inf.auth.IAuthService;
 import com.backend.nutri_ai.auth.util.OtpGenerator;
 import com.backend.nutri_ai.common.enums.ErrorCode;
@@ -25,7 +25,10 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import redis.clients.authentication.core.TokenRequestException;
 
+import javax.security.auth.RefreshFailedException;
+import javax.security.auth.login.CredentialException;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -46,14 +49,14 @@ public class AuthService implements IAuthService {
     public AuthResponse login(LoginRequest request) {
 
         AppUser user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_CREDENTIALS));
+                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + request.getEmail()));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new AppException(ErrorCode.INVALID_CREDENTIALS);
+            throw new UserNotFoundException("Password wrong");
         }
 
         if (user.getStatus().equals(UserStatus.BLOCKED)) {
-            throw new AppException(ErrorCode.USER_BLOCKED);
+            throw new UserNotFoundException("User blocked");
         }
 
         String accessToken = jwtService.generateAccessToken(user);
@@ -93,11 +96,11 @@ public class AuthService implements IAuthService {
         String cachedOtp = redisService.get(key);
 
         if (cachedOtp == null || !cachedOtp.equals(request.getOtp())) {
-            throw new AppException(ErrorCode.INVALID_OTP);
+            throw new InvalidOtpException("Invalid OTP");
         }
 
         AppUser user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + request.getEmail()));
 
         user.setStatus(UserStatus.ACTIVE);
         userRepository.save(user);
@@ -111,10 +114,10 @@ public class AuthService implements IAuthService {
 
         RefreshToken token = refreshTokenRepository
                 .findByTokenAndIsEnableTrue(request.getRefreshToken())
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REFRESH_TOKEN));
+                .orElseThrow(() -> new InvalidRefreshTokenException("Invalid refresh token"));
 
         if (token.getExpireTime().isBefore(Instant.now())) {
-            throw new AppException(ErrorCode.EXPIRED_REFRESH_TOKEN);
+            throw new ExpiredRefreshTokenException("Token has expired");
         }
 
         token.setIsEnable(false);
@@ -133,7 +136,7 @@ public class AuthService implements IAuthService {
     public void sendResetPasswordOtp(String email) {
 
         AppUser user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
 
         rateLimitOtp(email);
 
@@ -157,12 +160,12 @@ public class AuthService implements IAuthService {
         String cachedOtp = redisService.get(key);
 
         if (cachedOtp == null || !cachedOtp.equals(request.getOtp())) {
-            throw new AppException(ErrorCode.INVALID_OTP);
+            throw new InvalidOtpException("Invalid OTP");
         }
 
         // 2. Lấy User từ DB
         AppUser user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + request.getEmail()));
 
         // 3. Sử dụng Util để sinh mật khẩu ngẫu nhiên (Ví dụ: A8kMz9Lp2q)
         String newRandomPassword = generateRandomPassword.generate();
@@ -184,7 +187,7 @@ public class AuthService implements IAuthService {
 
         RefreshToken token = refreshTokenRepository
                 .findByToken(refreshToken)
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REFRESH_TOKEN));
+                .orElseThrow(() -> new InvalidRefreshTokenException("Invalid refresh token"));
 
         token.setIsEnable(false);
         refreshTokenRepository.save(token);
@@ -230,7 +233,7 @@ public class AuthService implements IAuthService {
         String key = RedisKey.OTP_RATE_LIMIT + email;
 
         if (redisService.exists(key)) {
-            throw new AppException(ErrorCode.OTP_TOO_MANY_ATTEMPTS);
+            throw new OtpTooManyAttemptsException("OtpTooManyAttemptsException");
         }
 
         redisService.set(

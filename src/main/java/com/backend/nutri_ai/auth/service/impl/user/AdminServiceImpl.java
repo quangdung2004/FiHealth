@@ -6,11 +6,12 @@ package com.backend.nutri_ai.auth.service.impl.user;
 import com.backend.nutri_ai.auth.dto.request.user.BanUserRequest;
 import com.backend.nutri_ai.auth.dto.response.user.UserSummaryResponse;
 import com.backend.nutri_ai.auth.entity.AppUser;
-import com.backend.nutri_ai.auth.repo.AppUserRepo;
+
 import com.backend.nutri_ai.auth.repository.AppUserRepository;
 import com.backend.nutri_ai.auth.service.inf.user.AdminService;
 import com.backend.nutri_ai.common.enums.UserRole;
 import com.backend.nutri_ai.common.enums.UserStatus;
+import com.backend.nutri_ai.common.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -56,13 +57,11 @@ public class AdminServiceImpl implements AdminService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (user.getRole() == UserRole.ADMIN) {
-            throw new RuntimeException("Không thể khóa tài khoản Admin");
+            throw new RuntimeException("You are not allowed to ban this user");
         }
 
         user.setStatus(UserStatus.BLOCKED);
         user.setBlockedReason(request.getReason());
-
-        // Quan trọng: Tăng token version để invalidate tất cả token cũ của user này
         user.setTokenVersion(user.getTokenVersion() + 1);
 
         appUserRepo.save(user);
@@ -73,7 +72,7 @@ public class AdminServiceImpl implements AdminService {
     @Transactional
     public void unbanUser(UUID userId) {
         AppUser user = appUserRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         user.setStatus(UserStatus.ACTIVE);
         user.setBlockedReason(null);

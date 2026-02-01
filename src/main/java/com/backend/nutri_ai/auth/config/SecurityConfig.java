@@ -72,7 +72,8 @@ public class SecurityConfig {
                                 "/api/dev/**",
                                 "/api/admin/foods/**",
                                 "/api/foods/**",
-                                "/api/admin/workouts/**"
+                                "/api/admin/workouts/**",
+                                "/api/payment/webhook/payos/**"
                         ).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()

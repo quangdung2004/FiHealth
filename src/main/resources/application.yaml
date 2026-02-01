@@ -49,7 +49,11 @@ spring:
       host: localhost
       port: 6379
       timeout: 60000
-
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
 
 logging:
   level:
@@ -59,4 +63,10 @@ jwt:
   access-token-expiration: 3600000      # Đã sửa từ 'expire' thành 'expiration'
   refresh-token-expiration: 604800000   # Mình khuyên sửa luôn cái này cho đồng bộ, kiểm tra lại code Java xem nó gọi tên là gì  # 7 days
 
+payos:
+  client-id: e9e21b99-38c9-4f64-aaeb-d87d3cbf420d
+  api-key: 1f111335-958b-4ec0-8ab7-e2957629e37e
+  checksum-key: 4ebd19e5e8bb18b7f29a862ded0f02fb74c2d214ecc40111c0347f7a13374e3f
+  return-url: https://www.youtube.com/
+  webhook-url:  https://eba1923ab3e9.ngrok-free.app/api/payment/webhook/payos
 

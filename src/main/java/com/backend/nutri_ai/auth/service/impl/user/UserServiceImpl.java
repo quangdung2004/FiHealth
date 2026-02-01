@@ -7,8 +7,9 @@ import com.backend.nutri_ai.auth.dto.response.user.UserDetailResponse;
 import com.backend.nutri_ai.auth.entity.AppUser;
 import com.backend.nutri_ai.auth.entity.UserProfile;
 import com.backend.nutri_ai.auth.mapper.UserProfileMapper;
-import com.backend.nutri_ai.auth.repo.AppUserRepo;
 
+
+import com.backend.nutri_ai.auth.repository.AppUserRepository;
 import com.backend.nutri_ai.auth.repository.UserProfileRepo;
 import com.backend.nutri_ai.auth.service.inf.user.UserService;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +27,7 @@ import java.util.UUID;
 @Slf4j
 public class UserServiceImpl implements UserService {
 
-    private final AppUserRepo appUserRepo;
+    private final AppUserRepository appUserRepo;
     private final UserProfileRepo userProfileRepo;
     private final UserProfileMapper userProfileMapper;
     private final PasswordEncoder passwordEncoder;
