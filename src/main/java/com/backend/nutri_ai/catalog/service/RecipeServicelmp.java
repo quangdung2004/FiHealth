@@ -9,6 +9,8 @@ import com.backend.nutri_ai.catalog.entity.RecipeIngredient;
 import com.backend.nutri_ai.catalog.mapper.RecipeMapper;
 import com.backend.nutri_ai.catalog.repository.IFoodRepository;
 import com.backend.nutri_ai.catalog.repository.IRecipeRepository;
+import com.backend.nutri_ai.common.exception.InvalidRequestException;
+import com.backend.nutri_ai.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -45,9 +47,7 @@ public class RecipeServicelmp implements IRecipeService {
     @Transactional(readOnly = true)
     public RecipeResponse getRecipeById(UUID id) {
         Recipe recipe = recipeRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Recipe not found with id: " + id)
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Recipe not found with id: " + id));
 
         return recipeMapper.toResponse(recipe);
     }
@@ -70,7 +70,6 @@ public class RecipeServicelmp implements IRecipeService {
         return recipeMapper.toResponse(recipe);
     }
 
-
     // ================= UPDATE =================
     @Override
     @Transactional
@@ -78,9 +77,7 @@ public class RecipeServicelmp implements IRecipeService {
         validateRecipeRequest(request);
 
         Recipe recipe = recipeRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Recipe not found with id: " + id)
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Recipe not found with id: " + id));
 
         recipe.getIngredients().clear();
         recipeMapper.updateEntity(recipe, request);
@@ -94,15 +91,12 @@ public class RecipeServicelmp implements IRecipeService {
         return recipeMapper.toResponse(recipe);
     }
 
-
     // ================= DELETE =================
     @Override
     @Transactional
     public void deleteRecipe(UUID id) {
         Recipe recipe = recipeRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Recipe not found with id: " + id)
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Recipe not found with id: " + id));
         recipe.setActive(false);
         recipeRepository.save(recipe);
     }
@@ -113,13 +107,11 @@ public class RecipeServicelmp implements IRecipeService {
         try {
             foodId = UUID.fromString(req.getFoodItemId());
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid food item ID: " + req.getFoodItemId());
+            throw new InvalidRequestException("Invalid food item ID: " + req.getFoodItemId());
         }
 
         FoodItem food = foodRepository.findById(foodId)
-                .orElseThrow(() ->
-                        new RuntimeException("Food item not found: " + req.getFoodItemId())
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Food item not found: " + req.getFoodItemId()));
 
         RecipeIngredient ingredient = new RecipeIngredient();
         ingredient.setRecipe(recipe);
@@ -131,18 +123,18 @@ public class RecipeServicelmp implements IRecipeService {
 
     private void validateRecipeRequest(RecipeRequest request) {
         if (request.getKcal() != null && request.getKcal() < 0)
-            throw new RuntimeException("Calories cannot be negative");
+            throw new InvalidRequestException("Calories cannot be negative");
 
         if (request.getProteinG() != null && request.getProteinG() < 0)
-            throw new RuntimeException("Protein cannot be negative");
+            throw new InvalidRequestException("Protein cannot be negative");
 
         if (request.getFatG() != null && request.getFatG() < 0)
-            throw new RuntimeException("Fat cannot be negative");
+            throw new InvalidRequestException("Fat cannot be negative");
 
         if (request.getCarbG() != null && request.getCarbG() < 0)
-            throw new RuntimeException("Carbohydrates cannot be negative");
+            throw new InvalidRequestException("Carbohydrates cannot be negative");
 
         if (request.getEstimatedCostVnd() != null && request.getEstimatedCostVnd() < 0)
-            throw new RuntimeException("Cost cannot be negative");
+            throw new InvalidRequestException("Cost cannot be negative");
     }
 }
