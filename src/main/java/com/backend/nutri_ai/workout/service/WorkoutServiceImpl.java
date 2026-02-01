@@ -84,7 +84,8 @@ public class WorkoutServiceImpl implements IWorkoutService {
     @Transactional
     public WorkoutPlanResponse generateWorkoutPlan(UUID assessmentId) {
         NutritionAssessment assessment = assessmentRepository.findById(assessmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Assessment not found detected with id: " + assessmentId));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Assessment not found detected with id: " + assessmentId));
 
         // 1. Determine Rules
         int daysPerWeek = calculateDaysPerWeek(assessment.getActivityLevel());
