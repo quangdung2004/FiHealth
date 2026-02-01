@@ -58,6 +58,11 @@ public class RecipeServicelmp implements IRecipeService {
     public RecipeResponse createRecipe(RecipeRequest request) {
         validateRecipeRequest(request);
 
+        if (recipeRepository.existsByName(request.getName())) {
+            throw new com.backend.nutri_ai.common.exception.DuplicatedResourceException(
+                    "Recipe with name '" + request.getName() + "' already exists");
+        }
+
         Recipe recipe = new Recipe();
         recipeMapper.updateEntity(recipe, request);
 
@@ -79,6 +84,11 @@ public class RecipeServicelmp implements IRecipeService {
         Recipe recipe = recipeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Recipe not found with id: " + id));
 
+        if (recipeRepository.existsByNameAndIdNot(request.getName(), id)) {
+            throw new com.backend.nutri_ai.common.exception.DuplicatedResourceException(
+                    "Recipe with name '" + request.getName() + "' already exists");
+        }
+
         recipe.getIngredients().clear();
         recipeMapper.updateEntity(recipe, request);
 
@@ -97,8 +107,7 @@ public class RecipeServicelmp implements IRecipeService {
     public void deleteRecipe(UUID id) {
         Recipe recipe = recipeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Recipe not found with id: " + id));
-        recipe.setActive(false);
-        recipeRepository.save(recipe);
+        recipeRepository.delete(recipe);
     }
 
     // ================= BUSINESS LOGIC =================

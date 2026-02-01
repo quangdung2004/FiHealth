@@ -103,7 +103,6 @@ public class FoodServiceImpl implements IFoodService {
         FoodItem food = foodRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Food not found with id: " + id));
 
-        food.setActive(false);
-        foodRepository.save(food);
+        foodRepository.delete(food);
     }
 }
