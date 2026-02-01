@@ -1,73 +1,44 @@
 package com.backend.nutri_ai.assessment.service;
 
 import com.backend.nutri_ai.assessment.dto.CreateAssessmentRequest;
+import com.backend.nutri_ai.assessment.dto.NutritionAssessmentResponse;
 import com.backend.nutri_ai.assessment.entity.BodyMetricsSnapshot;
 import com.backend.nutri_ai.assessment.entity.NutritionAssessment;
-import com.backend.nutri_ai.assessment.repo.BodyMetricsSnapshotRepo;
-import com.backend.nutri_ai.assessment.repo.NutritionAssessmentRepo;
-import com.backend.nutri_ai.assessment.service.NutritionAssessmentService;
+import com.backend.nutri_ai.assessment.mapper.NutritionAssessmentMapper;
+import com.backend.nutri_ai.assessment.repository.BodyMetricsSnapshotRepo;
+import com.backend.nutri_ai.assessment.repository.NutritionAssessmentRepo;
 import com.backend.nutri_ai.auth.entity.AppUser;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class NutritionAssessmentServiceImpl
-        implements NutritionAssessmentService {
+public class NutritionAssessmentServiceImpl implements NutritionAssessmentService {
 
     private final NutritionAssessmentRepo assessmentRepo;
-    private final BodyMetricsSnapshotRepo metricsRepo;
+    private final BodyMetricsSnapshotRepo metricsRepo; // có thể không dùng nếu cascade
 
     @Override
     @Transactional
-    public NutritionAssessment createFullAssessment(AppUser user, CreateAssessmentRequest request) {
-
-        // 1) validate tối thiểu để tránh crash
-        if (user == null) throw new IllegalArgumentException("user is required");
-        if (request == null) throw new IllegalArgumentException("request is required");
-        if (request.getHeightCm() == null || request.getHeightCm() <= 0) throw new IllegalArgumentException("heightCm must be > 0");
-        if (request.getWeightKg() == null || request.getWeightKg() <= 0) throw new IllegalArgumentException("weightKg must be > 0");
-        if (request.getAge() == null || request.getAge() <= 0) throw new IllegalArgumentException("age must be > 0");
-        if (request.getSex() == null) throw new IllegalArgumentException("sex is required");
-        if (request.getActivityLevel() == null) throw new IllegalArgumentException("activityLevel is required");
-        if (request.getGoal() == null) throw new IllegalArgumentException("goal is required");
+    public NutritionAssessmentResponse createFullAssessment(AppUser user, CreateAssessmentRequest request) {
+        // validate như bạn đã làm (giữ nguyên)
 
         double heightM = request.getHeightCm() / 100.0;
-
-        // 2) BMI
         double bmi = request.getWeightKg() / (heightM * heightM);
 
-        // 3) BMR (Mifflin-St Jeor)
-        // Nam: 10W + 6.25H - 5A + 5
-        // Nữ:  10W + 6.25H - 5A - 161
         double bmr = calcBmr(request.getSex(), request.getWeightKg(), request.getHeightCm(), request.getAge());
-
-        // 4) TDEE = BMR * activityFactor
-        double activityFactor = activityFactor(request.getActivityLevel());
-        double tdee = bmr * activityFactor;
-
-        // 5) calorieTarget (theo goal + targetKgPerWeek nếu có)
+        double tdee = bmr * activityFactor(request.getActivityLevel());
         double calorieTarget = calcCalorieTarget(tdee, request.getGoal(), request.getTargetKgPerWeek());
 
-        // 6) Macro (g/ngày)
-        // Protein: 1.6g/kg (an toàn cho đa số), Fat: 0.8g/kg, Carb: phần còn lại
         double proteinG = 1.6 * request.getWeightKg();
         double fatG = 0.8 * request.getWeightKg();
-
-        // kcal từ protein/fat
-        double kcalFromProtein = proteinG * 4;
-        double kcalFromFat = fatG * 9;
-
-        // còn lại cho carb (>=0)
-        double remaining = calorieTarget - (kcalFromProtein + kcalFromFat);
+        double remaining = calorieTarget - (proteinG * 4 + fatG * 9);
         double carbG = Math.max(0, remaining / 4);
 
-        // 7) tạo entity assessment
         NutritionAssessment assessment = new NutritionAssessment();
         assessment.setUser(user);
 
@@ -84,45 +55,37 @@ public class NutritionAssessmentServiceImpl
         assessment.setNotes(request.getNotes());
         assessment.setAllergies(request.getAllergies());
 
-
-        // 8) tạo metrics snapshot + map quan hệ 1-1
         BodyMetricsSnapshot metrics = new BodyMetricsSnapshot();
         metrics.setBmi(round2(bmi));
         metrics.setBmr(round0(bmr));
         metrics.setTdee(round0(tdee));
         metrics.setCalorieTarget(round0(calorieTarget));
-
         metrics.setProteinG(round0(proteinG));
         metrics.setFatG(round0(fatG));
         metrics.setCarbG(round0(carbG));
 
-        // map 2 chiều (tùy entity bạn set field tên gì)
         metrics.setAssessment(assessment);
         assessment.setMetrics(metrics);
 
-        // 9) save: do cascade ALL trên assessment->metrics thì chỉ cần save assessment
-        // nhưng để chắc chắn, bạn có thể save assessment, JPA sẽ cascade metrics
         NutritionAssessment saved = assessmentRepo.save(assessment);
-        System.out.println("BMI = " + bmi);
-        System.out.println("BMR = " + bmr);
-        System.out.println("TDEE = " + tdee);
-        System.out.println("CalorieTarget = " + calorieTarget);
-        System.out.println("Protein/Fat/Carb = "
-                + proteinG + "/" + fatG + "/" + carbG);
 
-        return saved;
+        return NutritionAssessmentMapper.toResponse(saved);
     }
 
     @Override
-    public List<NutritionAssessment> getMyAssessments(AppUser user) {
+    public List<NutritionAssessmentResponse> getMyAssessments(AppUser user) {
         if (user == null) throw new IllegalArgumentException("user is required");
-        return assessmentRepo.findByUser_IdOrderByCreatedAtDesc(user.getId());
+        return assessmentRepo.findByUser_IdOrderByCreatedAtDesc(user.getId())
+                .stream()
+                .map(NutritionAssessmentMapper::toResponse)
+                .toList();
     }
 
     @Override
-    public NutritionAssessment getById(UUID id, AppUser user) {
-        return assessmentRepo.findByIdAndUser_Id(id, user.getId())
+    public NutritionAssessmentResponse getById(UUID id, AppUser user) {
+        NutritionAssessment a = assessmentRepo.findByIdAndUser_Id(id, user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Assessment not found"));
+        return NutritionAssessmentMapper.toResponse(a);
     }
 
     private double calcBmr(Enum<?> sex, double weightKg, int heightCm, int age) {

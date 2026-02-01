@@ -16,29 +16,26 @@ import org.springframework.stereotype.Component;
 public class DevUserSeeder implements CommandLineRunner {
 
     public static final String DEV_EMAIL = "dev@local";
-    private static final String DEV_PASSWORD_HASH = "{noop}dev";
+    private static final String DEV_PASSWORD = "dev"; // plain
+
     private final PasswordEncoder passwordEncoder;
     private final AppUserRepository userRepository;
 
     @Override
     public void run(String... args) {
-        userRepository.findByEmail(DEV_EMAIL).ifPresentOrElse(
-                user -> {
-                    // đã tồn tại → không làm gì
-                },
-                () -> {
-                    AppUser dev = new AppUser();
-                    dev.setFullName("DEV User");
-                    dev.setEmail(DEV_EMAIL);
-                    dev.setPasswordHash(passwordEncoder.encode(DEV_PASSWORD_HASH));
-                    dev.setRole(UserRole.USER); // hoặc USER
-                    dev.setStatus(UserStatus.ACTIVE);
-                    dev.setFullName("Dev User");
-                    userRepository.save(dev);
 
-                    System.out.println("✅ Dev user created: " + DEV_EMAIL);
-                }
-        );
+        AppUser dev = userRepository.findByEmail(DEV_EMAIL)
+                .orElseGet(AppUser::new);   // có thì lấy, không có thì new
+
+        dev.setEmail(DEV_EMAIL);
+        dev.setFullName("Dev User");
+        dev.setPasswordHash(passwordEncoder.encode(DEV_PASSWORD));
+        dev.setRole(UserRole.USER);        // hoặc ADMIN nếu muốn
+        dev.setStatus(UserStatus.ACTIVE);
+        dev.setBlockedReason(null);
+
+        userRepository.save(dev);
+
+        System.out.println("✅ Dev user ensured: " + DEV_EMAIL);
     }
 }
-

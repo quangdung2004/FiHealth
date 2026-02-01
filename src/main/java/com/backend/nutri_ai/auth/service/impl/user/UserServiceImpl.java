@@ -12,6 +12,7 @@ import com.backend.nutri_ai.auth.mapper.UserProfileMapper;
 import com.backend.nutri_ai.auth.repository.AppUserRepository;
 import com.backend.nutri_ai.auth.repository.UserProfileRepo;
 import com.backend.nutri_ai.auth.service.inf.user.UserService;
+import com.backend.nutri_ai.common.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,19 +34,22 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     // --- SECURITY HELPER ---
     private AppUser getAuthenticatedUser() {
-        // 1. Lấy chuỗi từ Token (JwtService đã setSubject là ID)
-        String userIdString = SecurityContextHolder.getContext().getAuthentication().getName();
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || auth.getName() == null) {
+            throw new UnauthorizedException("Chưa đăng nhập");
+        }
 
-        // 2. Chuyển đổi từ String sang UUID
         UUID userId;
         try {
-            userId = UUID.fromString(userIdString);
+            userId = UUID.fromString(auth.getName());
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Token không hợp lệ: Subject không phải là UUID");
+            throw new UnauthorizedException("Token không hợp lệ: subject không phải UUID");
         }
+
         return appUserRepo.findById(userId)
-                .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy User với ID: " + userId));
+                .orElseThrow(() -> new UnauthorizedException("User không tồn tại"));
     }
+
 
     @Override
     @Transactional(readOnly = true)
