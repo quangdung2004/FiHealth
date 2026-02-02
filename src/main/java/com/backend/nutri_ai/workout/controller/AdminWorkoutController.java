@@ -27,16 +27,6 @@ public class AdminWorkoutController {
 
     private final IWorkoutService workoutService;
 
-    @Operation(summary = "Search workout catalog")
-    @GetMapping
-    public ResponseEntity<ApiResponse<Page<WorkoutCatalogResponse>>> searchCatalog(
-            @RequestParam(required = false) String q,
-            @RequestParam(required = false) Boolean active,
-            @RequestParam(required = false) WorkoutLevel level,
-            @RequestParam(required = false) WorkoutType type,
-            @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(ApiResponse.ok(workoutService.searchCatalog(q, active, level, type, pageable)));
-    }
 
     @Operation(summary = "Create workout item")
     @PostMapping

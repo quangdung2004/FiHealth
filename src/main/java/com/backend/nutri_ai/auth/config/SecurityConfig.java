@@ -72,7 +72,9 @@ public class SecurityConfig {
                                 "/api/dev/**",
                                 "/api/admin/foods/**",
                                 "/api/foods/**",
-                                "/api/admin/workouts/**"
+                                "/api/admin/workouts/**",
+                                "/api/admin/**",
+                                "/api/workouts/**"
                         ).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()

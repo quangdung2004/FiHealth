@@ -90,7 +90,7 @@ public class WorkoutServiceImpl implements IWorkoutService {
         // 1. Determine Rules
         int daysPerWeek = calculateDaysPerWeek(assessment.getActivityLevel());
         Goal goal = assessment.getGoal();
-        WorkoutLevel level = WorkoutLevel.BEGINNER; // Default for MVP
+        WorkoutLevel level = WorkoutLevel.Beginner; // Default for MVP
 
         // 2. Fetch all active exercises
         List<WorkoutCatalog> allExercises = catalogRepository.findAllActive();
@@ -188,7 +188,7 @@ public class WorkoutServiceImpl implements IWorkoutService {
         List<WorkoutCatalog> candidates = allExercises.stream()
                 // Filter by level (simplified: include <= level)
                 // For MVP just use all or match exact level if possible
-                .filter(e -> e.getLevel() == level || e.getLevel() == WorkoutLevel.BEGINNER)
+                .filter(e -> e.getLevel() == level || e.getLevel() == WorkoutLevel.Beginner)
                 .collect(Collectors.toList());
 
         // Simple selection logic
