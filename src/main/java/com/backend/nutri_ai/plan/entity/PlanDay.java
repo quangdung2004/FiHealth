@@ -27,7 +27,7 @@ public class PlanDay extends BaseEntity {
     private int dayIndex;
 
     @Column(name = "cost_vnd", nullable = false)
-    private Integer costVnd;
+    private Integer costVnd = 0;
 
     @Column(name = "total_kcal", nullable = false)
     private Integer totalKcal;

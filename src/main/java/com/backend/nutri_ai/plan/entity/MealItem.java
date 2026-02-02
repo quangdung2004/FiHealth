@@ -28,4 +28,22 @@ public class MealItem extends BaseEntity {
 
     @Column(name="amount", length=50)
     private String amount;
+
+    @Column(name="food_name", nullable=false, length=200)
+    private String foodName = ""; // ✅ bắt buộc vì DB NOT NULL
+
+    @Column(name="cost_vnd", nullable=false)
+    private int costVnd = 0;
+
+    @Column(name="kcal", nullable=false)
+    private int kcal = 0;
+
+    @Column(name="proteing", nullable=false)
+    private int proteinG = 0;
+
+    @Column(name="fatg", nullable=false)
+    private int fatG = 0;
+
+    @Column(name="carbg", nullable=false)
+    private int carbG = 0;
 }

@@ -5,8 +5,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Set;
 
 @Entity
 @Table(name="template_day")
@@ -22,6 +24,8 @@ public class TemplateDay extends BaseEntity {
     private Integer dayIndex;
 
     @OneToMany(mappedBy="day", cascade=CascadeType.ALL, orphanRemoval=true)
-    private List<TemplateMeal> meals = new ArrayList<>();
+    @OrderBy("mealOrder asc")
+    private Set<TemplateMeal> meals = new LinkedHashSet<>();
+
 }
 

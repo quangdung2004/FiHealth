@@ -9,7 +9,6 @@ import com.backend.nutri_ai.assessment.entity.NutritionAssessment;
 import com.backend.nutri_ai.assessment.repository.NutritionAssessmentRepository;
 import com.backend.nutri_ai.auth.entity.AppUser;
 import com.backend.nutri_ai.common.enums.PlanPeriod;
-import com.backend.nutri_ai.common.exception.ForbiddenException;
 import com.backend.nutri_ai.common.exception.ResourceNotFoundException;
 import com.backend.nutri_ai.plan.dto.MealPlanGenerateResponse;
 import com.backend.nutri_ai.plan.entity.MealPlan;
@@ -31,10 +30,10 @@ public class MealPlanGenerateService {
 
     public MealPlanGenerateResponse generate(AppUser user, UUID assessmentId, PlanPeriod period) {
 
-        // ✅ Query luôn theo userId => tự chặn ownership
+        // Query theo userId để chặn ownership -> không leak thông tin
         NutritionAssessment assessment = assessmentRepo
                 .findByIdWithMetricsAndUserId(assessmentId, user.getId())
-                .orElseThrow(() -> new ForbiddenException("Không có quyền hoặc assessment không tồn tại"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy assessment"));
 
         BodyMetricsSnapshot metrics = assessment.getMetrics();
         if (metrics == null) {

@@ -1,14 +1,12 @@
 package com.backend.nutri_ai.common.exception;
 
-import lombok.Getter;
+import com.backend.nutri_ai.common.enums.ErrorCode;
 
-@Getter
-public class BadRequestException extends RuntimeException {
-    private final String code;
-
-    public BadRequestException(String code, String message) {
-        super(message);
-        this.code = code;
+public class BadRequestException extends BaseBusinessException {
+    public BadRequestException() {
+        super(ErrorCode.INVALID_REQUEST);
+    }
+    public BadRequestException(String message) {
+        super(ErrorCode.INVALID_REQUEST, message);
     }
 }
-
