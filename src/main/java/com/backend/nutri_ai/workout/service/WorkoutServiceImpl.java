@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -124,6 +125,37 @@ public class WorkoutServiceImpl implements IWorkoutService {
         return planRepository.findById(id)
                 .map(mapper::toPlanResponse)
                 .orElseThrow(() -> new ResourceNotFoundException("Plan not found detected with id: " + id));
+    }
+
+    @Override
+    public WorkoutPlanResponse getMyCurrentWorkoutPlan() {
+        UUID userId = getCurrentUserId();
+        // Return active plan or throw generic resource not found which maps to 404
+        return planRepository.findFirstByUserIdAndStatus(userId, "ACTIVE")
+                .map(mapper::toPlanResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("No active workout plan found for current user"));
+    }
+
+    @Override
+    public List<WorkoutPlanResponse> getMyWorkoutHistory() {
+        UUID userId = getCurrentUserId();
+
+        return planRepository
+                .findByUserIdAndStatusOrderByCreatedAtDesc(userId, "COMPLETED")
+                .stream()
+                .map(mapper::toPlanResponse)
+                .collect(Collectors.toList());
+    }
+
+
+    private UUID getCurrentUserId() {
+        String userIdString = SecurityContextHolder.getContext().getAuthentication().getName();
+        try {
+            return UUID.fromString(userIdString);
+        } catch (IllegalArgumentException e) {
+            // This should not happen if JwtAuthenticationFilter validates correctly
+            throw new RuntimeException("Invalid User ID in token or not authenticated");
+        }
     }
 
     // ===== Helper Logic =====

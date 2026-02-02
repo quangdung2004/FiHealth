@@ -15,7 +15,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -44,6 +44,18 @@ public class WorkoutController {
         return new ResponseEntity<>(
                 ApiResponse.ok("Workout plan generated", workoutService.generateWorkoutPlan(assessmentId)),
                 HttpStatus.CREATED);
+    }
+
+    @Operation(summary = "Get my current active workout plan")
+    @GetMapping("/my-current")
+    public ResponseEntity<ApiResponse<WorkoutPlanResponse>> getMyCurrentPlan() {
+        return ResponseEntity.ok(ApiResponse.ok(workoutService.getMyCurrentWorkoutPlan()));
+    }
+
+    @Operation(summary = "Get my workout history")
+    @GetMapping("/my-history")
+    public ResponseEntity<ApiResponse<List<WorkoutPlanResponse>>> getMyWorkoutHistory() {
+        return ResponseEntity.ok(ApiResponse.ok(workoutService.getMyWorkoutHistory()));
     }
 
     @Operation(summary = "Get workout plan details")
