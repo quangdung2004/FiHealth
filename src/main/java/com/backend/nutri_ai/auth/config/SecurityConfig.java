@@ -68,15 +68,14 @@ public class SecurityConfig {
                                 "/api/auth/**","/api/users/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-//                                "/api/assessments/**",
                                 "/api/dev/**",
                                 "/api/admin/foods/**",
                                 "/api/foods/**",
                                 "/api/admin/workouts/**",
                                 "/api/webhook/payos/**",
                                 "/api/webhook/payos",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**"
+                                "/api/admin/**",
+                                "/api/workouts/**"
                         ).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()

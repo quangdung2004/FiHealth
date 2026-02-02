@@ -5,6 +5,10 @@ import com.backend.nutri_ai.catalog.dto.response.AllergenResponse;
 import com.backend.nutri_ai.catalog.entity.FoodAllergen;
 import com.backend.nutri_ai.catalog.mapper.AllergenMapper;
 import com.backend.nutri_ai.catalog.repository.IAllergenRepository;
+import com.backend.nutri_ai.common.exception.DataIntegrityViolationBusinessException;
+import com.backend.nutri_ai.common.exception.DuplicatedResourceException;
+import com.backend.nutri_ai.common.exception.InvalidRequestException;
+import com.backend.nutri_ai.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,9 +37,7 @@ public class AllergenServicelmp implements IAllergenService {
     @Transactional(readOnly = true)
     public AllergenResponse getAllergenById(UUID id) {
         FoodAllergen allergen = allergenRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Allergen not found with id: " + id)
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Allergen not found with id: " + id));
 
         return allergenMapper.toResponse(allergen);
     }
@@ -48,7 +50,7 @@ public class AllergenServicelmp implements IAllergenService {
 
         String code = request.getCode().toUpperCase().trim();
         if (allergenRepository.existsByCode(code)) {
-            throw new RuntimeException("Allergen with code " + code + " already exists");
+            throw new DuplicatedResourceException("Allergen with code " + code + " already exists");
         }
 
         FoodAllergen allergen = new FoodAllergen();
@@ -65,15 +67,13 @@ public class AllergenServicelmp implements IAllergenService {
         validateAllergenRequest(request);
 
         FoodAllergen allergen = allergenRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Allergen not found with id: " + id)
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Allergen not found with id: " + id));
 
         String newCode = request.getCode().toUpperCase().trim();
         String oldCode = allergen.getCode();
 
         if (!oldCode.equals(newCode) && allergenRepository.existsByCode(newCode)) {
-            throw new RuntimeException("Allergen with code " + newCode + " already exists");
+            throw new DuplicatedResourceException("Allergen with code " + newCode + " already exists");
         }
 
         allergenMapper.updateEntity(allergen, request);
@@ -87,18 +87,14 @@ public class AllergenServicelmp implements IAllergenService {
     @Transactional
     public void deleteAllergen(UUID id) {
         FoodAllergen allergen = allergenRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Allergen not found with id: " + id)
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Allergen not found with id: " + id));
 
         if (!allergen.getFoodItems().isEmpty()) {
-            throw new RuntimeException(
+            throw new DataIntegrityViolationBusinessException(
                     String.format(
                             "Cannot delete allergen '%s'. It is used by %d food item(s).",
                             allergen.getName(),
-                            allergen.getFoodItems().size()
-                    )
-            );
+                            allergen.getFoodItems().size()));
         }
 
         allergenRepository.delete(allergen);
@@ -107,17 +103,16 @@ public class AllergenServicelmp implements IAllergenService {
     // ================= VALIDATION =================
     private void validateAllergenRequest(AllergenRequest request) {
         if (request.getCode() == null || request.getCode().trim().isEmpty()) {
-            throw new RuntimeException("Allergen code is required");
+            throw new InvalidRequestException("Allergen code is required");
         }
 
         if (!request.getCode().matches("^[A-Z_]+$")) {
-            throw new RuntimeException(
-                    "Allergen code must contain only uppercase letters and underscores"
-            );
+            throw new InvalidRequestException(
+                    "Allergen code must contain only uppercase letters and underscores");
         }
 
         if (request.getName() == null || request.getName().trim().isEmpty()) {
-            throw new RuntimeException("Allergen name is required");
+            throw new InvalidRequestException("Allergen name is required");
         }
     }
 }

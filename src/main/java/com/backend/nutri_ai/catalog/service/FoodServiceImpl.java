@@ -6,6 +6,7 @@ import com.backend.nutri_ai.catalog.entity.FoodItem;
 import com.backend.nutri_ai.catalog.mapper.FoodMapper;
 import com.backend.nutri_ai.catalog.repository.IAllergenRepository;
 import com.backend.nutri_ai.catalog.repository.IFoodRepository;
+import com.backend.nutri_ai.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,17 +27,22 @@ public class FoodServiceImpl implements IFoodService {
     // ================= SEARCH =================
     @Override
     public Page<FoodResponse> searchFoods(String query, Pageable pageable) {
-        return foodRepository.searchFoods(query, true, pageable)
-                .map(foodMapper::toResponse);
+        Page<FoodItem> page = foodRepository.searchFoods(query, null, pageable);
+
+        if (page.isEmpty()) {
+            throw new ResourceNotFoundException("No foods found matching query: " + query);
+        }
+
+        return page.map(foodMapper::toResponse);
     }
+
+
 
     // ================= GET BY ID =================
     @Override
     public FoodResponse getFoodById(UUID id) {
         FoodItem food = foodRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Food not found with id: " + id)
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Food not found with id: " + id));
 
         return foodMapper.toResponse(food);
     }
@@ -45,14 +51,18 @@ public class FoodServiceImpl implements IFoodService {
     @Override
     @Transactional
     public FoodResponse createFood(FoodRequest request) {
+        if (foodRepository.existsByName(request.getName())) {
+            throw new com.backend.nutri_ai.common.exception.DuplicatedResourceException(
+                    "Food with name '" + request.getName() + "' already exists");
+        }
+
         // map request -> entity
         FoodItem food = foodMapper.toEntity(request);
 
         // xử lý allergen (business logic)
         if (request.getAllergenIds() != null && !request.getAllergenIds().isEmpty()) {
             food.setAllergens(
-                    new HashSet<>(allergenRepository.findAllById(request.getAllergenIds()))
-            );
+                    new HashSet<>(allergenRepository.findAllById(request.getAllergenIds())));
         }
 
         food = foodRepository.save(food);
@@ -65,9 +75,12 @@ public class FoodServiceImpl implements IFoodService {
     @Transactional
     public FoodResponse updateFood(UUID id, FoodRequest request) {
         FoodItem food = foodRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Food not found with id: " + id)
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Food not found with id: " + id));
+
+        if (foodRepository.existsByNameAndIdNot(request.getName(), id)) {
+            throw new com.backend.nutri_ai.common.exception.DuplicatedResourceException(
+                    "Food with name '" + request.getName() + "' already exists");
+        }
 
         // map request -> entity (update)
         foodMapper.updateEntity(food, request);
@@ -78,8 +91,7 @@ public class FoodServiceImpl implements IFoodService {
 
             if (!request.getAllergenIds().isEmpty()) {
                 food.getAllergens().addAll(
-                        allergenRepository.findAllById(request.getAllergenIds())
-                );
+                        allergenRepository.findAllById(request.getAllergenIds()));
             }
         }
 
@@ -93,11 +105,8 @@ public class FoodServiceImpl implements IFoodService {
     @Transactional
     public void deleteFood(UUID id) {
         FoodItem food = foodRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Food not found with id: " + id)
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Food not found with id: " + id));
 
-        food.setActive(false);
-        foodRepository.save(food);
+        foodRepository.delete(food);
     }
 }

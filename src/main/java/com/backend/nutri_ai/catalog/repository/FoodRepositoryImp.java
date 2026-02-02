@@ -15,4 +15,5 @@ public class FoodRepositoryImp {
     public Page<FoodItem> searchFoods(String query, Pageable pageable) {
         return foodRepository.findByNameOrTagsContaining(query, pageable);
     }
+
 }

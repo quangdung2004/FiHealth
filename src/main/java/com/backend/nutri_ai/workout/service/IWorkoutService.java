@@ -9,6 +9,7 @@ import com.backend.nutri_ai.workout.dto.response.WorkoutPlanResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface IWorkoutService {
@@ -24,6 +25,11 @@ public interface IWorkoutService {
     void deleteCatalogItem(UUID id);
 
     WorkoutCatalogResponse getCatalogItem(UUID id);
+
+    // User APIs
+    WorkoutPlanResponse getMyCurrentWorkoutPlan();
+
+    List<WorkoutPlanResponse> getMyWorkoutHistory();
 
     // Plan Generation
     WorkoutPlanResponse generateWorkoutPlan(UUID assessmentId);

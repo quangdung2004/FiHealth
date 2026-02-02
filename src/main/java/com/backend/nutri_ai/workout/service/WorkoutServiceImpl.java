@@ -16,9 +16,12 @@ import com.backend.nutri_ai.workout.entity.WorkoutPlan;
 import com.backend.nutri_ai.workout.mapper.WorkoutMapper;
 import com.backend.nutri_ai.workout.repository.IWorkoutPlanRepository;
 import com.backend.nutri_ai.workout.repository.WorkoutCatalogRepositoryImp;
+import com.backend.nutri_ai.common.exception.ResourceNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +31,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WorkoutServiceImpl implements IWorkoutService {
 
     private final WorkoutCatalogRepositoryImp catalogRepository;
@@ -49,16 +53,20 @@ public class WorkoutServiceImpl implements IWorkoutService {
     @Transactional
     public WorkoutCatalogResponse createCatalogItem(WorkoutCatalogRequest request) {
         WorkoutCatalog entity = mapper.toCatalogEntity(request);
-        return mapper.toCatalogResponse(catalogRepository.save(entity));
+        WorkoutCatalog saved = catalogRepository.save(entity);
+        log.info("Created workout catalog item: {}", saved.getId());
+        return mapper.toCatalogResponse(saved);
     }
 
     @Override
     @Transactional
     public WorkoutCatalogResponse updateCatalogItem(UUID id, WorkoutCatalogRequest request) {
         WorkoutCatalog entity = catalogRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Workout not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Workout not found detected with id: " + id));
         mapper.updateCatalogEntity(entity, request);
-        return mapper.toCatalogResponse(catalogRepository.save(entity));
+        WorkoutCatalog saved = catalogRepository.save(entity);
+        log.info("Updated workout catalog item: {}", saved.getId());
+        return mapper.toCatalogResponse(saved);
     }
 
     @Override
@@ -70,24 +78,25 @@ public class WorkoutServiceImpl implements IWorkoutService {
     public WorkoutCatalogResponse getCatalogItem(UUID id) {
         return catalogRepository.findById(id)
                 .map(mapper::toCatalogResponse)
-                .orElseThrow(() -> new RuntimeException("Workout not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Workout not found detected with id: " + id));
     }
 
     @Override
     @Transactional
     public WorkoutPlanResponse generateWorkoutPlan(UUID assessmentId) {
         NutritionAssessment assessment = assessmentRepository.findById(assessmentId)
-                .orElseThrow(() -> new RuntimeException("Assessment not found"));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Assessment not found detected with id: " + assessmentId));
 
         // 1. Determine Rules
         int daysPerWeek = calculateDaysPerWeek(assessment.getActivityLevel());
         Goal goal = assessment.getGoal();
-        WorkoutLevel level = WorkoutLevel.BEGINNER; // Default for MVP
+        WorkoutLevel level = WorkoutLevel.Beginner; // Default for MVP
 
         // 2. Fetch all active exercises
         List<WorkoutCatalog> allExercises = catalogRepository.findAllActive();
         if (allExercises.isEmpty()) {
-            throw new RuntimeException("Catalog is empty. Please seed catalog first.");
+            throw new ResourceNotFoundException("Catalog is empty. Please seed catalog first.");
         }
 
         // 3. Create Plan
@@ -106,14 +115,47 @@ public class WorkoutServiceImpl implements IWorkoutService {
         }
         plan.setDays(days);
 
-        return mapper.toPlanResponse(planRepository.save(plan));
+        WorkoutPlan saved = planRepository.save(plan);
+        log.info("Generated workout plan: {} for assessment: {}", saved.getId(), assessmentId);
+        return mapper.toPlanResponse(saved);
     }
 
     @Override
     public WorkoutPlanResponse getWorkoutPlan(UUID id) {
         return planRepository.findById(id)
                 .map(mapper::toPlanResponse)
-                .orElseThrow(() -> new RuntimeException("Plan not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Plan not found detected with id: " + id));
+    }
+
+    @Override
+    public WorkoutPlanResponse getMyCurrentWorkoutPlan() {
+        UUID userId = getCurrentUserId();
+        // Return active plan or throw generic resource not found which maps to 404
+        return planRepository.findFirstByUserIdAndStatus(userId, "ACTIVE")
+                .map(mapper::toPlanResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("No active workout plan found for current user"));
+    }
+
+    @Override
+    public List<WorkoutPlanResponse> getMyWorkoutHistory() {
+        UUID userId = getCurrentUserId();
+
+        return planRepository
+                .findByUserIdAndStatusOrderByCreatedAtDesc(userId, "COMPLETED")
+                .stream()
+                .map(mapper::toPlanResponse)
+                .collect(Collectors.toList());
+    }
+
+
+    private UUID getCurrentUserId() {
+        String userIdString = SecurityContextHolder.getContext().getAuthentication().getName();
+        try {
+            return UUID.fromString(userIdString);
+        } catch (IllegalArgumentException e) {
+            // This should not happen if JwtAuthenticationFilter validates correctly
+            throw new RuntimeException("Invalid User ID in token or not authenticated");
+        }
     }
 
     // ===== Helper Logic =====
@@ -178,7 +220,7 @@ public class WorkoutServiceImpl implements IWorkoutService {
         List<WorkoutCatalog> candidates = allExercises.stream()
                 // Filter by level (simplified: include <= level)
                 // For MVP just use all or match exact level if possible
-                .filter(e -> e.getLevel() == level || e.getLevel() == WorkoutLevel.BEGINNER)
+                .filter(e -> e.getLevel() == level || e.getLevel() == WorkoutLevel.Beginner)
                 .collect(Collectors.toList());
 
         // Simple selection logic
