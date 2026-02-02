@@ -55,13 +55,31 @@ public class NotificationScheduler {
 
             for (AppUser u : users) {
 
-                boolean alreadySent =
-                        logRepo.existsByUserIdAndNotificationId(
+                boolean skip = false;
+
+                switch (n.getType()) {
+
+                    case ONCE -> {
+                        skip = logRepo.existsByUserIdAndNotificationId(
                                 u.getId(),
                                 n.getId()
                         );
+                    }
 
-                if (alreadySent) continue;
+                    case REPEAT -> {
+                        Instant blockTime = Instant.now()
+                                .minusSeconds(n.getRepeatIntervalMinutes() * 60L);
+
+                        skip = logRepo.existsByUserIdAndNotificationIdAndSentAtAfter(
+                                u.getId(),
+                                n.getId(),
+                                blockTime
+                        );
+                    }
+                }
+
+                if (skip) continue;
+
 
 
                 producer.send(new EmailQueueMessage(

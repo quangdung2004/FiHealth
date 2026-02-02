@@ -39,7 +39,7 @@ public class PayOsPaymentService {
                 .findByPlanTypeAndActiveTrue(planType)
                 .orElseThrow(() -> new RuntimeException("Gói dịch vụ không tồn tại"));
 
-        // SỬA TẠI ĐÂY: orderCode phải là SỐ (milis) thay vì String có chữ "NUTRI-"
+
         long orderCode = System.currentTimeMillis();
         Instant expiredAt = Instant.now().plusSeconds(600);
 
@@ -53,14 +53,18 @@ public class PayOsPaymentService {
 
         PayOsCreatePaymentResponse res = payOsClient.createPayment(req);
 
-        // Lưu vào DB (Giữ nguyên logic cũ, chỉ đổi kiểu dữ liệu orderCode nếu cần)
+        // PayOsPaymentService#createQr
+
         PaymentTransaction tx = new PaymentTransaction();
         tx.setOrderCode(String.valueOf(orderCode));
         tx.setAmount(plan.getPrice());
         tx.setPlanType(planType);
+        tx.setDurationDays(plan.getDurationDays());   // ✅ thêm dòng này
         tx.setUser(user);
         tx.setStatus(PaymentStatus.PENDING);
+        tx.setExpiredAt(expiredAt);                  // ✅ thêm nếu muốn
         txRepo.save(tx);
+
 
         return QrPaymentResponse.builder()
                 .orderCode(String.valueOf(orderCode))

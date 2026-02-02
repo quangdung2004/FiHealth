@@ -73,7 +73,10 @@ public class SecurityConfig {
                                 "/api/admin/foods/**",
                                 "/api/foods/**",
                                 "/api/admin/workouts/**",
-                                "/api/payment/webhook/payos/**"
+                                "/api/webhook/payos/**",
+                                "/api/webhook/payos",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
                         ).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()

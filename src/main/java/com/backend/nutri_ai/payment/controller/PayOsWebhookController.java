@@ -1,60 +1,46 @@
 package com.backend.nutri_ai.payment.controller;
 
-import com.backend.nutri_ai.common.enums.PaymentStatus;
-import com.backend.nutri_ai.payment.config.PayOsConfig;
 import com.backend.nutri_ai.payment.dto.request.PayOsWebhookRequest;
-import com.backend.nutri_ai.payment.entity.PaymentTransaction;
-import com.backend.nutri_ai.payment.repository.PaymentTransactionRepository;
-import com.backend.nutri_ai.payment.service.MembershipService;
-import com.backend.nutri_ai.payment.util.PayOsSignatureUtil;
-import jakarta.transaction.Transactional;
+import com.backend.nutri_ai.payment.security.PayOsSignatureVerifier;
+import com.backend.nutri_ai.payment.service.inf.PayOsWebhookService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
-
+@Slf4j
 @RestController
-@RequestMapping("/api/payment/webhook/payos")
+@RequestMapping("/api/webhook")
 @RequiredArgsConstructor
 public class PayOsWebhookController {
 
-    private final PaymentTransactionRepository txRepo;
-    private final MembershipService membershipService;
-    private final PayOsConfig config;
+    private final PayOsSignatureVerifier signatureVerifier;
+    private final ObjectMapper objectMapper;
+    private final PayOsWebhookService webhookService;
 
-    @PostMapping
-    @Transactional
-    public ResponseEntity<String> webhook(
-            @RequestBody PayOsWebhookRequest req
-    ) {
-        String expected = PayOsSignatureUtil.webhookSignature(
-                req, config.getChecksumKey()
-        );
+    @PostMapping("/payos")
+    public ResponseEntity<Void> webhook(@RequestBody String rawBody) {
+        try {
+            JsonNode root = objectMapper.readTree(rawBody);
+            String signature = root.get("signature").asText();
 
-        if (!expected.equals(req.getSignature()))
-            return ResponseEntity.status(403).body("INVALID");
+            if (!signatureVerifier.verify(rawBody, signature)) {
+                log.warn("PAYOS SIGNATURE INVALID – IGNORED");
+                return ResponseEntity.ok().build();
+            }
 
-        PaymentTransaction tx = txRepo
-                .findByOrderCode(req.getOrderCode())
-                .orElse(null);
+            PayOsWebhookRequest request =
+                    objectMapper.readValue(rawBody, PayOsWebhookRequest.class);
 
-        if (tx == null || tx.getStatus() != PaymentStatus.PENDING)
-            return ResponseEntity.ok("IGNORED");
+            webhookService.handleWebhook(request);
 
-        if ("PAID".equals(req.getStatus())) {
-            tx.setStatus(PaymentStatus.SUCCESS);
-            tx.setPaidAt(Instant.now());
-
-            membershipService.upgrade(
-                    tx.getUser(),
-                    tx.getDurationDays()
-            );
-            return ResponseEntity.ok("SUCCESS");
+        } catch (Exception e) {
+            log.error("PAYOS WEBHOOK ERROR", e);
         }
 
-        tx.setStatus(PaymentStatus.EXPIRED);
-        return ResponseEntity.ok("FAILED");
+        // PayOS chỉ cần HTTP 200
+        return ResponseEntity.ok().build();
     }
 }
-

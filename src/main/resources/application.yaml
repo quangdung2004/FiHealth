@@ -66,11 +66,11 @@ jwt:
   secret: a1b31e357b84889fbccfe46570e46aa3bcd90455b308e3eb65f3f5f4b7dde504
   access-token-expiration: 3600000      # Đã sửa từ 'expire' thành 'expiration'
   refresh-token-expiration: 604800000   # Mình khuyên sửa luôn cái này cho đồng bộ, kiểm tra lại code Java xem nó gọi tên là gì  # 7 days
-
 payos:
-  client-id: e9e21b99-38c9-4f64-aaeb-d87d3cbf420d
-  api-key: 1f111335-958b-4ec0-8ab7-e2957629e37e
-  checksum-key: 4ebd19e5e8bb18b7f29a862ded0f02fb74c2d214ecc40111c0347f7a13374e3f
-  return-url: https://www.youtube.com/
-  webhook-url:  https://eba1923ab3e9.ngrok-free.app/api/payment/webhook/payos
+  client-id: "e9e21b99-38c9-4f64-aaeb-d87d3cbf420d"
+  api-key: "1f111335-958b-4ec0-8ab7-e2957629e37e"
+  checksum-key: "2dd3030eec8e3c738a41fec86e49774663b7223898954749334232cb15b50273"
+  return-url: "https://www.youtube.com/"
+  webhook-url: "https://c8ade47896c1.ngrok-free.app/api/webhook/payos"
+
 

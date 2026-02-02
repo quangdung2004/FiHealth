@@ -75,8 +75,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        // Dùng startsWith và bao quát cả trường hợp có hoặc không có dấu / ở cuối
-        return path.startsWith("/api/payment/webhook/payos");
+
+        return path.startsWith("/api/webhook/payos")   // ✅ ĐÚNG PATH
+                || path.startsWith("/api/auth/")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs");
     }
+
+
 }
 
