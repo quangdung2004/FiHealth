@@ -55,4 +55,36 @@ public class GlobalExceptionHandler {
                         ex.getMessage()
                 ));
     }
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidJson(Exception ex, HttpServletRequest request) {
+        ErrorCode ec = ErrorCode.INVALID_JSON;
+        log.warn("[INVALID_JSON] {} msg={}", req(request), ex.getMessage());
+        return ResponseEntity.status(ec.getHttpStatus())
+                .body(ApiResponse.fail(ec.name(), ec.getMessage()));
+    }
+
+    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodArgNotValid(Exception ex, HttpServletRequest request) {
+        ErrorCode ec = ErrorCode.INVALID_REQUEST;
+        log.warn("[INVALID_REQUEST] {} msg={}", req(request), ex.getMessage());
+        return ResponseEntity.status(ec.getHttpStatus())
+                .body(ApiResponse.fail(ec.name(), ec.getMessage()));
+    }
+
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(Exception ex, HttpServletRequest request) {
+        ErrorCode ec = ErrorCode.CONSTRAINT_VIOLATION;
+        log.warn("[CONSTRAINT] {} msg={}", req(request), ex.getMessage());
+        return ResponseEntity.status(ec.getHttpStatus())
+                .body(ApiResponse.fail(ec.name(), ec.getMessage()));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnknown(Exception ex, HttpServletRequest request) {
+        ErrorCode ec = ErrorCode.INTERNAL_ERROR;
+        log.error("[UNHANDLED] {} msg={}", req(request), ex.getMessage(), ex);
+        return ResponseEntity.status(ec.getHttpStatus())
+                .body(ApiResponse.fail(ec.name(), ec.getMessage()));
+    }
+
 }

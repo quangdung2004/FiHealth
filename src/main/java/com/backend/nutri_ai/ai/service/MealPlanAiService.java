@@ -20,8 +20,8 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.*;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.net.SocketTimeoutException;
 import java.time.Duration;
@@ -75,19 +75,14 @@ public class MealPlanAiService {
         try {
             raw = chatModel.call(prompt).getResult().getOutput().getText();
 
-        } catch (HttpClientErrorException e) {
-            int status = e.getStatusCode().value();
+        } catch (RestClientResponseException e) {
+            int status = e.getRawStatusCode();
             String msg = safePrefix(e.getResponseBodyAsString(), 300);
 
             if (status == 429) throw new AiQuotaExceededException();
             if (status == 403) throw new ForbiddenException("Không có quyền truy cập AI");
             if (status == 401) throw new UnauthorizedException("AI chưa xác thực");
             throw new ExternalApiErrorException("AI client error: " + status + " " + msg);
-
-        } catch (HttpServerErrorException e) {
-            int status = e.getStatusCode().value();
-            String msg = safePrefix(e.getResponseBodyAsString(), 300);
-            throw new AiServiceUnavailableException("AI server error: " + status + " " + msg);
 
         } catch (ResourceAccessException e) {
             if (e.getCause() instanceof SocketTimeoutException) {
@@ -119,15 +114,20 @@ public class MealPlanAiService {
         int latencyMs = (int) Duration.between(start, Instant.now()).toMillis();
         log.info("MealPlan AI latency={}ms", latencyMs);
 
-        aiRepo.save(aiInteractionMapper.toEntity(
-                user.getId(),
-                assessment.getId(),
-                AiTask.MEAL_PLAN_GENERATE,
-                systemPrompt + "\n\n" + userPrompt,
-                raw,
-                latencyMs,
-                "openrouter"
-        ));
+        // logging interaction shouldn't break user flow (optional but recommended)
+        try {
+            aiRepo.save(aiInteractionMapper.toEntity(
+                    user.getId(),
+                    assessment.getId(),
+                    AiTask.MEAL_PLAN_GENERATE,
+                    systemPrompt + "\n\n" + userPrompt,
+                    raw,
+                    latencyMs,
+                    "openrouter"
+            ));
+        } catch (Exception e) {
+            log.warn("Failed to save AiInteraction log (ignored). msg={}", e.getMessage());
+        }
 
         String json = extractJsonObject(raw);
 
@@ -156,7 +156,8 @@ public class MealPlanAiService {
             payload.put("candidates", cands);
             return objectMapper.writeValueAsString(payload);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to build AI input json", e);
+            // đây là lỗi hệ thống nội bộ -> map về INTERNAL_ERROR
+            throw new InternalErrorException("Failed to build AI input json");
         }
     }
 

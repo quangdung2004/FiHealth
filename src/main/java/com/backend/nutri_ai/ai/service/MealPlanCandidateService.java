@@ -8,7 +8,6 @@ import com.backend.nutri_ai.common.enums.PlanPeriod;
 import com.backend.nutri_ai.common.exception.BadRequestException;
 import com.backend.nutri_ai.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -90,7 +89,9 @@ public class MealPlanCandidateService {
         }
 
         if (candidates.isEmpty()) {
-            throw new BadRequestException(String.valueOf(HttpStatus.BAD_REQUEST),"Template không có món hợp lệ (có thể do filter dị ứng/bị inactive)");
+            throw new BadRequestException(
+                    "Template không có món hợp lệ (dị ứng=" + allergyCodes + ", templateId=" + template.getId() + ")"
+            );
         }
 
         // Optional: có thể bổ sung candidates dự phòng từ catalog sau (v2)

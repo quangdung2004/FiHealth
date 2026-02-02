@@ -62,6 +62,8 @@ spring:
 logging:
   level:
     org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: trace
+
 jwt:
   secret: a1b31e357b84889fbccfe46570e46aa3bcd90455b308e3eb65f3f5f4b7dde504
   access-token-expiration: 3600000      # Đã sửa từ 'expire' thành 'expiration'

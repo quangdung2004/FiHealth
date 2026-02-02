@@ -30,6 +30,13 @@ public class PlanMeal extends BaseEntity {
     @Column(nullable=false, length=50)
     private String name;
 
+    // ✅ THÊM 2 FIELD NÀY
+    @Column(name="kcal", nullable=false)
+    private int kcal = 0;
+
+    @Column(name="cost_vnd", nullable=false)
+    private int costVnd = 0;
+
     @OneToMany(mappedBy="meal", cascade=CascadeType.ALL, orphanRemoval=true)
     private List<MealItem> items = new ArrayList<>();
 }

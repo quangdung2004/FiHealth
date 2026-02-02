@@ -4,11 +4,13 @@ import com.backend.nutri_ai.auth.constant.SecurityConstant;
 import com.backend.nutri_ai.auth.entity.AppUser;
 import com.backend.nutri_ai.auth.repository.AppUserRepository;
 import com.backend.nutri_ai.common.enums.UserStatus;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -20,6 +22,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -36,6 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String header = request.getHeader(SecurityConstant.AUTH_HEADER);
 
+        // Không có token -> cho đi tiếp
         if (header == null || !header.startsWith(SecurityConstant.TOKEN_PREFIX)) {
             filterChain.doFilter(request, response);
             return;
@@ -63,10 +67,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        } catch (Exception e) {
+        }
+        // ===== Chỉ các lỗi AUTH/JWT mới coi là 401 =====
+        catch (JwtException | IllegalArgumentException | DisabledException e) {
+            log.warn("JWT auth failed: {}", e.getMessage());
             SecurityContextHolder.clearContext();
+            // coi như chưa đăng nhập, để Spring Security xử lý
             filterChain.doFilter(request, response);
             return;
+        }
+        // ===== Lỗi hệ thống: cho nổ ra 500 =====
+        catch (Exception e) {
+            log.error("System error in JWT filter", e);
+            throw new ServletException(e);
         }
 
 
@@ -84,4 +97,3 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 
 }
-
