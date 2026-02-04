@@ -5,7 +5,6 @@ import com.backend.nutri_ai.ai.dto.MealPlanAiOutput;
 import com.backend.nutri_ai.ai.service.MealPlanValidatorService;
 import com.backend.nutri_ai.assessment.entity.NutritionAssessment;
 import com.backend.nutri_ai.auth.entity.AppUser;
-import com.backend.nutri_ai.catalog.entity.FoodItem;
 import com.backend.nutri_ai.catalog.entity.Recipe;
 import com.backend.nutri_ai.common.enums.MealType;
 import com.backend.nutri_ai.common.enums.PlanPeriod;
@@ -30,6 +29,13 @@ public class MealPlanPersistenceService {
     private final MealPlanRepository mealPlanRepository;
     private final EntityManager em;
 
+    // 1 bữa = đúng 3 món
+    private static final int ITEMS_PER_MEAL = 3;
+
+    // clamp servings
+    private static final double MIN_SERVINGS = 0.5;
+    private static final double MAX_SERVINGS = 2.0;
+
     @Transactional
     public MealPlan persist(
             AppUser user,
@@ -39,133 +45,195 @@ public class MealPlanPersistenceService {
             MealPlanAiOutput aiOut,
             Map<Integer, MealPlanValidatorService.DayTotals> totalsByDay
     ) {
+
         if (user == null) throw new BadRequestException("Thiếu user");
         if (assessment == null) throw new BadRequestException("Thiếu assessment");
-        if (period == null) throw new BadRequestException("Thiếu period");
         if (aiOut == null || aiOut.days() == null || aiOut.days().isEmpty())
             throw new BadRequestException("AI output trống");
-        if (candidates == null || candidates.isEmpty())
-            throw new BadRequestException("Danh sách candidates trống");
 
+        // ===== candidate map + recipe pool =====
         Map<String, CandidateDto> candMap = new HashMap<>();
+        List<CandidateDto> recipePool = new ArrayList<>();
+
         for (CandidateDto c : candidates) {
-            if (c != null && c.id() != null) candMap.put(c.id(), c);
+            if (c == null || c.id() == null) continue;
+            candMap.putIfAbsent(c.id(), c);
+            if ("RECIPE".equalsIgnoreCase(c.type())) {
+                recipePool.add(c);
+            }
         }
 
+        if (recipePool.isEmpty())
+            throw new BadRequestException("Không có RECIPE candidate");
+
+        // ===== plan meta =====
         LocalDate start = LocalDate.now();
         int totalDays = switch (period) {
             case DAY -> 1;
             case WEEK -> 7;
             case MONTH -> 30;
         };
-        LocalDate end = start.plusDays(totalDays - 1);
 
         MealPlan plan = new MealPlan();
         plan.setUser(user);
         plan.setAssessment(assessment);
         plan.setPeriod(period);
         plan.setStartDate(start);
-        plan.setEndDate(end);
+        plan.setEndDate(start.plusDays(totalDays - 1));
         plan.setTotalDays(totalDays);
-        plan.setBudgetPerDayVnd(assessment.getBudgetPerDayVnd() != null ? assessment.getBudgetPerDayVnd() : 0);
+        plan.setBudgetPerDayVnd(
+                assessment.getBudgetPerDayVnd() != null ? assessment.getBudgetPerDayVnd() : 0
+        );
+        plan.setDays(new HashSet<>());
 
         int totalCost = 0;
 
-        List<MealPlanAiOutput.DayOutput> days = new ArrayList<>(aiOut.days());
-        days.sort(Comparator.comparingInt(MealPlanAiOutput.DayOutput::dayIndex));
-
-        for (MealPlanAiOutput.DayOutput d : days) {
+        // ===== dedupe dayIndex =====
+        Map<Integer, MealPlanAiOutput.DayOutput> dayMap = new LinkedHashMap<>();
+        for (MealPlanAiOutput.DayOutput d : aiOut.days()) {
             if (d == null) continue;
+            if (d.dayIndex() <= 0 || d.dayIndex() > totalDays) continue;
+            dayMap.putIfAbsent(d.dayIndex(), d);
+        }
 
-            int dayIndex = d.dayIndex();
-            if (dayIndex <= 0 || dayIndex > totalDays) continue;
-
-            LocalDate date = start.plusDays(dayIndex - 1);
+        // ===== build days =====
+        for (var entry : dayMap.entrySet()) {
+            int dayIndex = entry.getKey();
+            MealPlanAiOutput.DayOutput d = entry.getValue();
 
             PlanDay planDay = new PlanDay();
             planDay.setPlan(plan);
             planDay.setDayIndex(dayIndex);
-            planDay.setDate(date);
+            planDay.setDate(start.plusDays(dayIndex - 1));
+            planDay.setMeals(new HashSet<>());
 
-            MealPlanValidatorService.DayTotals totals = (totalsByDay != null ? totalsByDay.get(dayIndex) : null);
-            int dayKcal = (totals != null ? totals.kcal() : 0);
-            int dayCost = (totals != null ? totals.costVnd() : 0);
+            // chống trùng recipe trong cả ngày
+            Set<UUID> usedRecipeIdsInDay = new HashSet<>();
 
-            planDay.setTotalKcal(dayKcal);
-            planDay.setCostVnd(dayCost);
-            totalCost += dayCost;
+            MealPlanValidatorService.DayTotals totals =
+                    totalsByDay != null ? totalsByDay.get(dayIndex) : null;
 
-            List<MealPlanAiOutput.MealOutput> meals =
-                    new ArrayList<>(d.meals() != null ? d.meals() : List.of());
-            meals.sort(Comparator.comparingInt(MealPlanAiOutput.MealOutput::mealOrder));
+            planDay.setTotalKcal(totals != null ? totals.kcal() : 0);
+            planDay.setCostVnd(totals != null ? totals.costVnd() : 0);
+            totalCost += planDay.getCostVnd();
 
-            for (MealPlanAiOutput.MealOutput m : meals) {
-                if (m == null) continue;
+            // ===== dedupe mealOrder =====
+            Map<Integer, MealPlanAiOutput.MealOutput> mealMap = new LinkedHashMap<>();
+            for (MealPlanAiOutput.MealOutput m : d.meals()) {
+                if (m == null || m.mealOrder() <= 0) continue;
+                mealMap.putIfAbsent(m.mealOrder(), m);
+            }
+
+            for (var mEntry : mealMap.entrySet()) {
+                MealPlanAiOutput.MealOutput m = mEntry.getValue();
 
                 PlanMeal planMeal = new PlanMeal();
                 planMeal.setDay(planDay);
                 planMeal.setMealOrder(m.mealOrder());
-                planMeal.setName(m.name() != null ? m.name() : defaultMealName(m.mealOrder()));
+                planMeal.setName(firstNonBlank(m.name(), defaultMealName(m.mealOrder())));
                 planMeal.setMealType(inferMealType(m.mealOrder(), planMeal.getName()));
+                planMeal.setItems(new HashSet<>());
 
                 int mealKcal = 0;
                 int mealCost = 0;
 
+                // chống trùng trong 1 meal
+                Set<UUID> usedRecipeIdsInMeal = new HashSet<>();
+
                 List<MealPlanAiOutput.ItemOutput> items =
-                        (m.items() != null ? m.items() : List.of());
+                        new ArrayList<>(m.items() != null ? m.items() : List.of());
+                Collections.shuffle(items);
 
+                int added = 0;
+
+                // ===== PASS 1: theo AI =====
                 for (MealPlanAiOutput.ItemOutput it : items) {
-                    if (it == null) continue;
+                    if (added >= ITEMS_PER_MEAL) break;
+                    if (it == null || it.recipeCandidateId() == null) continue;
 
-                    CandidateDto cand = candMap.get(it.candidateId());
-                    if (cand == null) continue;
+                    CandidateDto cand = candMap.get(it.recipeCandidateId());
+                    if (cand == null || !"RECIPE".equalsIgnoreCase(cand.type())) continue;
 
-                    double servings = it.servings();
-                    if (servings <= 0) continue;
+                    UUID rid = extractUuid(cand.id());
+                    if (!usedRecipeIdsInMeal.add(rid)) continue;
+                    if (!usedRecipeIdsInDay.add(rid)) continue;
 
-                    // ✅ FIX: cand.kcal()/cand.costVnd() là int => cast sang double khi nhân
-                    int itemKcal = (int) Math.round(((double) cand.kcal()) * servings);
-                    int itemCost = (int) Math.round(((double) cand.costVnd()) * servings);
+                    double servings = clamp(
+                            it.servings() != null ? it.servings() : 1.0,
+                            MIN_SERVINGS, MAX_SERVINGS
+                    );
+
+                    int itemKcal = (int) Math.round(cand.kcal() * servings);
+                    int itemCost = (int) Math.round(cand.costVnd() * servings);
 
                     mealKcal += itemKcal;
                     mealCost += itemCost;
 
-                    MealItem item = new MealItem();
-                    item.setMeal(planMeal);
-
-                    UUID refId = extractUuidFromCandidateId(cand.id());
-                    if ("RECIPE".equalsIgnoreCase(nullSafeString(cand.type()))) {
-                        item.setRecipe(em.getReference(Recipe.class, refId));
-                        item.setFoodItem(null);
-                    } else {
-                        item.setFoodItem(em.getReference(FoodItem.class, refId));
-                        item.setRecipe(null);
-                    }
-
-                    // ✅ Snapshot để tránh lỗi DB NOT NULL (food_name/cost_vnd/kcal...)
-                    String snapshotName = firstNonBlank(
-                            safeCandidateName(cand),
-                            planMeal.getName(),
-                            "Unknown"
-                    );
-                    item.setFoodName(snapshotName);
-
-                    item.setKcal(itemKcal);
-                    item.setCostVnd(itemCost);
-
-                    // macro: nếu CandidateDto có thì dùng, không có => 0
-                    item.setProteinG((int) Math.round(safeGetProteinG(cand) * servings));
-                    item.setFatG((int) Math.round(safeGetFatG(cand) * servings));
-                    item.setCarbG((int) Math.round(safeGetCarbG(cand) * servings));
-
-                    item.setAmount(formatAmount(servings, safeServingUnit(cand)));
-                    planMeal.getItems().add(item);
+                    planMeal.getItems().add(buildItem(planMeal, cand, rid, servings, itemKcal, itemCost));
+                    added++;
                 }
 
-                // nếu PlanMeal có các field NOT NULL trong DB thì set luôn
-                planMeal.setCostVnd(mealCost);
-                planMeal.setKcal(mealKcal);
+                // ===== PASS 2: auto-fill nếu thiếu =====
 
+// 2.1) ưu tiên món chưa dùng trong ngày
+                Collections.shuffle(recipePool);
+                for (CandidateDto c : recipePool) {
+                    if (added >= ITEMS_PER_MEAL) break;
+
+                    UUID rid = extractUuid(c.id());
+
+                    // không trùng trong meal
+                    if (!usedRecipeIdsInMeal.add(rid)) continue;
+
+                    // ưu tiên chưa dùng trong ngày
+                    if (!usedRecipeIdsInDay.add(rid)) continue;
+
+                    double servings = 1.0;
+                    servings = clamp(servings, MIN_SERVINGS, MAX_SERVINGS);
+
+                    int itemKcal = (int) Math.round(c.kcal() * servings);
+                    int itemCost = (int) Math.round(c.costVnd() * servings);
+
+                    mealKcal += itemKcal;
+                    mealCost += itemCost;
+
+                    planMeal.getItems().add(buildItem(planMeal, c, rid, servings, itemKcal, itemCost));
+                    added++;
+                }
+
+// 2.2) fallback: nếu vẫn thiếu thì cho phép reuse trong ngày (nhưng vẫn không trùng trong meal)
+                if (added < ITEMS_PER_MEAL) {
+                    Collections.shuffle(recipePool);
+                    for (CandidateDto c : recipePool) {
+                        if (added >= ITEMS_PER_MEAL) break;
+
+                        UUID rid = extractUuid(c.id());
+
+                        // không trùng trong meal
+                        if (!usedRecipeIdsInMeal.add(rid)) continue;
+
+                        double servings = 1.0;
+                        servings = clamp(servings, MIN_SERVINGS, MAX_SERVINGS);
+
+                        int itemKcal = (int) Math.round(c.kcal() * servings);
+                        int itemCost = (int) Math.round(c.costVnd() * servings);
+
+                        mealKcal += itemKcal;
+                        mealCost += itemCost;
+
+                        planMeal.getItems().add(buildItem(planMeal, c, rid, servings, itemKcal, itemCost));
+                        added++;
+                    }
+                }
+
+                if (added != ITEMS_PER_MEAL) {
+                    throw new BadRequestException("Không đủ 3 món cho bữa " + m.mealOrder()
+                            + " (recipePool=" + recipePool.size() + ")");
+                }
+
+
+                planMeal.setKcal(mealKcal);
+                planMeal.setCostVnd(mealCost);
                 planDay.getMeals().add(planMeal);
             }
 
@@ -176,36 +244,41 @@ public class MealPlanPersistenceService {
         return mealPlanRepository.save(plan);
     }
 
-    private UUID extractUuidFromCandidateId(String candidateId) {
-        if (candidateId == null || candidateId.length() < 3) {
-            throw new BadRequestException("candidateId không hợp lệ: " + candidateId);
-        }
-        try {
-            return UUID.fromString(candidateId.substring(2));
-        } catch (Exception e) {
-            throw new BadRequestException("candidateId UUID không hợp lệ: " + candidateId);
-        }
+    // ===== helpers =====
+
+    private MealItem buildItem(
+            PlanMeal meal, CandidateDto cand, UUID rid,
+            double servings, int kcal, int cost
+    ) {
+        MealItem item = new MealItem();
+        item.setMeal(meal);
+        item.setRecipe(em.getReference(Recipe.class, rid));
+        item.setFoodItem(null);
+        item.setFoodName(cand.name());
+        item.setKcal(kcal);
+        item.setCostVnd(cost);
+        item.setProteinG((int) Math.round(cand.proteinG() * servings));
+        item.setFatG((int) Math.round(cand.fatG() * servings));
+        item.setCarbG((int) Math.round(cand.carbG() * servings));
+        item.setAmount(formatAmount(servings));
+        return item;
     }
 
-    private String formatAmount(double servings, String unit) {
-        String s = (servings == (long) servings) ? String.valueOf((long) servings) : String.valueOf(servings);
-        if (unit == null || unit.isBlank()) unit = "serving";
-        return s + " x " + unit;
+    private UUID extractUuid(String cid) {
+        return UUID.fromString(cid.substring(2));
     }
 
-    private MealType inferMealType(int order, String name) {
-        String n = (name == null) ? "" : name.toLowerCase(Locale.ROOT);
-        if (n.contains("sáng")) return MealType.BREAKFAST;
-        if (n.contains("trưa")) return MealType.LUNCH;
-        if (n.contains("tối")) return MealType.DINNER;
-        if (n.contains("phụ") || n.contains("snack")) return MealType.SNACK;
+    private double clamp(double v, double min, double max) {
+        return Math.max(min, Math.min(max, v));
+    }
 
-        return switch (order) {
-            case 1 -> MealType.BREAKFAST;
-            case 2 -> MealType.LUNCH;
-            case 3 -> MealType.DINNER;
-            default -> MealType.SNACK;
-        };
+    private String formatAmount(double s) {
+        return (s == (long) s ? (long) s : s) + " x serving";
+    }
+
+    private static String firstNonBlank(String... v) {
+        for (String s : v) if (s != null && !s.isBlank()) return s;
+        return "";
     }
 
     private String defaultMealName(int order) {
@@ -217,68 +290,11 @@ public class MealPlanPersistenceService {
         };
     }
 
-    // ---------------- helpers ----------------
-
-    private static String nullSafeString(String v) {
-        return v == null ? "" : v;
-    }
-
-    private static String firstNonBlank(String... values) {
-        if (values == null) return "";
-        for (String v : values) {
-            if (v != null && !v.isBlank()) return v;
-        }
-        return "";
-    }
-
-    private static String safeCandidateName(CandidateDto cand) {
-        if (cand == null) return null;
-        try {
-            var m = cand.getClass().getMethod("name");
-            Object val = m.invoke(cand);
-            return val != null ? val.toString() : null;
-        } catch (Exception ignore) {}
-        return cand.id();
-    }
-
-    private static String safeServingUnit(CandidateDto cand) {
-        if (cand == null) return null;
-        try {
-            var m = cand.getClass().getMethod("servingUnit");
-            Object val = m.invoke(cand);
-            return val != null ? val.toString() : null;
-        } catch (Exception ignore) {
-            return null;
-        }
-    }
-
-    private static double safeGetProteinG(CandidateDto cand) {
-        if (cand == null) return 0.0;
-        try {
-            var m = cand.getClass().getMethod("proteinG");
-            Object val = m.invoke(cand);
-            if (val instanceof Number n) return n.doubleValue();
-        } catch (Exception ignore) {}
-        return 0.0;
-    }
-
-    private static double safeGetFatG(CandidateDto cand) {
-        if (cand == null) return 0.0;
-        try {
-            var m = cand.getClass().getMethod("fatG");
-            Object val = m.invoke(cand);
-            if (val instanceof Number n) return n.doubleValue();
-        } catch (Exception ignore) {}
-        return 0.0;
-    }
-
-    private static double safeGetCarbG(CandidateDto cand) {
-        if (cand == null) return 0.0;
-        try {
-            var m = cand.getClass().getMethod("carbG");
-            Object val = m.invoke(cand);
-            if (val instanceof Number n) return n.doubleValue();
-        } catch (Exception ignore) {}
-        return 0.0;
+    private MealType inferMealType(int order, String name) {
+        String n = name.toLowerCase();
+        if (n.contains("sáng")) return MealType.BREAKFAST;
+        if (n.contains("trưa")) return MealType.LUNCH;
+        if (n.contains("tối")) return MealType.DINNER;
+        return MealType.SNACK;
     }
 }

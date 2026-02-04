@@ -39,6 +39,13 @@ public class MealPlanAiService {
     private final ObjectMapper objectMapper;
     private final PromptTemplateRepository promptTemplateRepository;
 
+    // ✅ HARD RULE: 1 bữa = 3 món
+    private static final int ITEMS_PER_MEAL = 3;
+
+    // ✅ Servings clamp (AI được phép trả trong khoảng này)
+    private static final double MIN_SERVINGS = 0.5;
+    private static final double MAX_SERVINGS = 2.0;
+
     public MealPlanAiOutput generate(
             AppUser user,
             NutritionAssessment assessment,
@@ -46,9 +53,10 @@ public class MealPlanAiService {
             PlanPeriod period,
             List<CandidateDto> candidates
     ) {
+        String inputJson = buildInputJson(assessment, metrics, period, candidates);
 
         String systemPrompt = defaultSystemPrompt();
-        String userPrompt = defaultUserPrompt(buildInputJson(assessment, metrics, period, candidates));
+        String userPrompt = defaultUserPrompt(inputJson);
 
         PromptTemplate tpl = promptTemplateRepository
                 .findFirstByNameAndActiveTrueAndIsDefaultTrue("MEAL_PLAN_JSON")
@@ -60,7 +68,7 @@ public class MealPlanAiService {
             }
             if (tpl.getUserPromptTemplate() != null && !tpl.getUserPromptTemplate().isBlank()) {
                 userPrompt = tpl.getUserPromptTemplate()
-                        .replace("{{inputJson}}", buildInputJson(assessment, metrics, period, candidates));
+                        .replace("{{inputJson}}", inputJson);
             }
         }
 
@@ -114,7 +122,6 @@ public class MealPlanAiService {
         int latencyMs = (int) Duration.between(start, Instant.now()).toMillis();
         log.info("MealPlan AI latency={}ms", latencyMs);
 
-        // logging interaction shouldn't break user flow (optional but recommended)
         try {
             aiRepo.save(aiInteractionMapper.toEntity(
                     user.getId(),
@@ -145,6 +152,10 @@ public class MealPlanAiService {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("period", period.name());
             payload.put("mealsPerDay", a.getMealsPerDay());
+            payload.put("itemsPerMeal", ITEMS_PER_MEAL);
+            payload.put("minServings", MIN_SERVINGS);
+            payload.put("maxServings", MAX_SERVINGS);
+
             payload.put("budgetPerDayVnd", (a.getBudgetPerDayVnd() != null ? a.getBudgetPerDayVnd() : 0));
             payload.put("goal", a.getGoal().name());
             payload.put("calorieTarget", m.getCalorieTarget());
@@ -156,7 +167,6 @@ public class MealPlanAiService {
             payload.put("candidates", cands);
             return objectMapper.writeValueAsString(payload);
         } catch (Exception e) {
-            // đây là lỗi hệ thống nội bộ -> map về INTERNAL_ERROR
             throw new InternalErrorException("Failed to build AI input json");
         }
     }
@@ -164,15 +174,26 @@ public class MealPlanAiService {
     private String defaultSystemPrompt() {
         return """
 Bạn là AI tạo thực đơn dinh dưỡng.
-Chỉ được chọn món từ danh sách candidates (theo candidateId).
-KHÔNG tự tạo món ngoài danh sách.
-CHỈ trả về 1 JSON object hợp lệ đúng schema, không bọc ``` và không giải thích.
 
-Quy tắc:
+BẮT BUỘC:
+- CHỈ được chọn candidates có type = "RECIPE".
+- KHÔNG được chọn type = "FOOD".
+- recipeCandidateId phải bắt đầu bằng "R_" và thuộc danh sách candidates.
+- KHÔNG tự tạo món ngoài danh sách.
+
 - Mỗi ngày phải có đúng mealsPerDay bữa.
-- Tổng kcal/ngày gần calorieTarget (±10%).
-- Tổng cost/ngày <= budgetPerDayVnd.
-- servings > 0.
+- Mỗi bữa phải có đúng itemsPerMeal món (items.length = itemsPerMeal).
+- Trong cùng 1 bữa: không được trùng recipeCandidateId.
+
+- servings phải nằm trong khoảng [minServings, maxServings].
+- KHÔNG được trả servings quá lớn.
+
+- Tổng cost/ngày PHẢI nằm trong khoảng [90% * budgetPerDayVnd, 100% * budgetPerDayVnd] (nếu budgetPerDayVnd > 0).
+- Không được lặp recipeCandidateId trong cùng 1 ngày.
+- Mỗi bữa phải có đúng 3 món (items length = 3).
+
+
+CHỈ trả về 1 JSON object hợp lệ đúng schema, không bọc ``` và không giải thích.
 """;
     }
 
@@ -192,7 +213,7 @@ Trả về CHỈ MỘT JSON OBJECT hợp lệ theo schema:
           "mealOrder": number,
           "name": string,
           "items": [
-            { "candidateId": string, "servings": number }
+            { "recipeCandidateId": string, "servings": number }
           ]
         }
       ]
@@ -201,12 +222,13 @@ Trả về CHỈ MỘT JSON OBJECT hợp lệ theo schema:
   "notes": string
 }
 
-Quy tắc:
-- candidateId phải thuộc danh sách candidates.
-- servings > 0.
+Quy tắc bắt buộc:
+- recipeCandidateId phải thuộc danh sách candidates VÀ có type="RECIPE" (id bắt đầu bằng "R_").
 - Mỗi ngày đúng mealsPerDay bữa.
-- Tổng kcal/ngày gần calorieTarget (±10%%).
-- Tổng cost/ngày <= budgetPerDayVnd.
+- Mỗi bữa đúng itemsPerMeal món; không trùng recipeCandidateId trong 1 bữa.
+- servings nằm trong [minServings, maxServings].
+- Tổng cost/ngày <= budgetPerDayVnd (cố gắng).
+- Tổng kcal/ngày gần calorieTarget (±10%%) (cố gắng).
 - KHÔNG bọc bằng ``` và KHÔNG thêm chữ ngoài JSON.
 """.formatted(inputJson);
     }
