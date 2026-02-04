@@ -25,6 +25,7 @@ public class UserProfileMapper {
                 .id(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
+                .membership(user.getMembership())
                 .hasProfile(hasProfile);
 
         // 2. Nếu có Profile, map các trường chi tiết

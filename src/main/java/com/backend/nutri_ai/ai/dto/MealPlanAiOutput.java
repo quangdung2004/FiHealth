@@ -20,8 +20,9 @@ public record MealPlanAiOutput(
             List<ItemOutput> items
     ) {}
 
+    // ✅ chỉ cho phép recipe
     public record ItemOutput(
-            String candidateId,
-            double servings
+            String recipeCandidateId, // ví dụ: "R_<uuid>"
+            Double servings
     ) {}
 }

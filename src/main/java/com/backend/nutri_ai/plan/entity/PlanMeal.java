@@ -6,8 +6,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name="plan_meal", indexes = {
@@ -38,5 +38,6 @@ public class PlanMeal extends BaseEntity {
     private int costVnd = 0;
 
     @OneToMany(mappedBy="meal", cascade=CascadeType.ALL, orphanRemoval=true)
-    private List<MealItem> items = new ArrayList<>();
+    private Set<MealItem> items = new LinkedHashSet<>();
+
 }
