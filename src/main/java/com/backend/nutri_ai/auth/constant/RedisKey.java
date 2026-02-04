@@ -12,5 +12,6 @@ public class RedisKey {
 
     // Giới hạn gửi OTP (chống spam)
     public static final String OTP_RATE_LIMIT = "auth:otp:limit:";
+    public static final String REGISTER_PENDING = "REGISTER_PENDING:";
 }
 

@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,27 +28,21 @@ public interface AppUserRepository extends JpaRepository<AppUser, UUID> {
     );
 
     Page<AppUser> findByRoleNot(UserRole role, Pageable pageable);
-
-    /* ================= EMAIL / NOTIFICATION ================= */
-
-    // 🔹 Gửi cho tất cả user còn ACTIVE
     List<AppUser> findByStatus(UserStatus status);
-
-    // 🔹 Gửi theo membership (FREE / PREMIUM) + chỉ ACTIVE
     List<AppUser> findByMembershipAndStatus(
             MembershipType membership,
             UserStatus status
     );
 
-    // 🔹 Gửi cho nhiều nhóm membership + chỉ ACTIVE
     List<AppUser> findByMembershipInAndStatus(
             List<MembershipType> memberships,
             UserStatus status
     );
-
-    // 🔹 Đếm user ACTIVE theo nhóm (dashboard / preview)
     long countByMembershipAndStatus(
             MembershipType membership,
             UserStatus status
     );
+    long countByCreatedAtBetween(Instant from, Instant to);
+
+    List<AppUser> findTop500ByStatusAndBlockedAtBefore(UserStatus status, Instant cutoff);
 }

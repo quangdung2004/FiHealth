@@ -13,6 +13,7 @@ public class SubscriptionPlanResponse {
     private Long id;
     private PlanType planType;
     private String name;
+    private String description;
     private Long price;
     private Integer durationDays;
     private boolean active;

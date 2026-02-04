@@ -10,5 +10,5 @@ public interface MailService {
     void sendActivationMail(String to, String activationLink);
     public void sendNewPasswordMail(String to, String newPassword);
     void sendHtmlMail(String to, String subject, String html);
-
+    void sendPremiumThankYouMail(String to, String fullName, int durationDays, Long amount, String orderCode);
 }

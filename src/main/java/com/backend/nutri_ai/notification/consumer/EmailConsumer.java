@@ -23,7 +23,7 @@ public class EmailConsumer {
     @RabbitListener(queues = RabbitConfig.EMAIL_QUEUE)
     public void consume(EmailQueueMessage msg) {
 
-        log.info("📩 Sending mail to {}", msg.getTo());
+        log.info(" Sending mail to {}", msg.getTo());
 
         mailService.sendHtmlMail(
                 msg.getTo(),

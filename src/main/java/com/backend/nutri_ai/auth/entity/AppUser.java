@@ -43,5 +43,7 @@ import java.time.Instant;
     private Integer tokenVersion = 0;
     @OneToOne(mappedBy="user", cascade=CascadeType.ALL, orphanRemoval=true, fetch=FetchType.LAZY)
     private UserProfile profile;
+    @Column
+    private Instant blockedAt;
 }
 

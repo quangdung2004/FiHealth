@@ -24,4 +24,5 @@ public class CreateOrUpdatePlanRequest {
     private Integer durationDays;
 
     private boolean active;
+    private String description;
 }

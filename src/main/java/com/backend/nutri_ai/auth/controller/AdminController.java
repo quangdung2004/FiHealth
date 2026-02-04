@@ -17,7 +17,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
-// Bảo vệ toàn bộ Controller này, chỉ Role ADMIN mới vào được
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 

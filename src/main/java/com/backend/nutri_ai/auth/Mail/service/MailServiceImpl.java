@@ -79,4 +79,12 @@ public class MailServiceImpl implements MailService {
             throw new RuntimeException("Send mail failed", e);
         }
     }
+    @Override
+    public void sendPremiumThankYouMail(String to, String fullName, int durationDays, Long amount, String orderCode) {
+        String subject = "Cảm ơn bạn đã đăng ký FiHealth Premium";
+        String html = MailTemplateUtil.premiumThankYouTemplate(fullName, durationDays, amount, orderCode);
+        sendHtml(to, subject, html);
+    }
+
+
 }

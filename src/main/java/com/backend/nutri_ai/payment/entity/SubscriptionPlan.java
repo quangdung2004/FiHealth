@@ -22,6 +22,10 @@ public class SubscriptionPlan {
     private PlanType planType;
 
     private String name;
+    
+    @Column(columnDefinition = "TEXT")
+    private String description;
+    
     private Long price;
     private Integer durationDays;
     private boolean active = true;

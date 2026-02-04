@@ -27,6 +27,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
         SubscriptionPlan plan = SubscriptionPlan.builder()
                 .planType(request.getPlanType())
                 .name(request.getName())
+                .description(request.getDescription())
                 .price(request.getPrice())
                 .durationDays(request.getDurationDays())
                 .active(request.isActive())
@@ -42,6 +43,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
                 .orElseThrow(() -> new RuntimeException("PLAN_NOT_FOUND"));
 
         plan.setName(request.getName());
+        plan.setDescription(request.getDescription());
         plan.setPrice(request.getPrice());
         plan.setDurationDays(request.getDurationDays());
         plan.setActive(request.isActive());
@@ -76,6 +78,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
                 .id(plan.getId())
                 .planType(plan.getPlanType())
                 .name(plan.getName())
+                .description(plan.getDescription())
                 .price(plan.getPrice())
                 .durationDays(plan.getDurationDays())
                 .active(plan.isActive())

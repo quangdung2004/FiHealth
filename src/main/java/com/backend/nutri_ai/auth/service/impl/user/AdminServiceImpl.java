@@ -8,7 +8,9 @@ import com.backend.nutri_ai.auth.dto.response.user.UserSummaryResponse;
 import com.backend.nutri_ai.auth.entity.AppUser;
 
 import com.backend.nutri_ai.auth.repository.AppUserRepository;
+import com.backend.nutri_ai.auth.service.impl.analytics.UserEventService;
 import com.backend.nutri_ai.auth.service.inf.user.AdminService;
+import com.backend.nutri_ai.common.enums.UserEventType;
 import com.backend.nutri_ai.common.enums.UserRole;
 import com.backend.nutri_ai.common.enums.UserStatus;
 import com.backend.nutri_ai.common.exception.UserNotFoundException;
@@ -20,6 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -28,7 +31,7 @@ import java.util.UUID;
 public class AdminServiceImpl implements AdminService {
 
     private final AppUserRepository appUserRepo;
-
+    private final UserEventService eventService;
     @Override
     @Transactional(readOnly = true)
     public Page<UserSummaryResponse> getAllUsers(int page, int size) {
@@ -62,10 +65,20 @@ public class AdminServiceImpl implements AdminService {
 
         user.setStatus(UserStatus.BLOCKED);
         user.setBlockedReason(request.getReason());
+        user.setBlockedAt(Instant.now());
         user.setTokenVersion(user.getTokenVersion() + 1);
 
         appUserRepo.save(user);
-        log.info("Admin banned user: {}", user.getEmail());
+        eventService.track(
+                UserEventType.ADMIN_USER_BANNED,
+                user.getId(),
+                true,
+                "ADMIN",
+                null,
+                "{\"reason\":\"" + request.getReason() + "\"}",
+                null
+        );
+
     }
 
     @Override
@@ -76,8 +89,17 @@ public class AdminServiceImpl implements AdminService {
 
         user.setStatus(UserStatus.ACTIVE);
         user.setBlockedReason(null);
+        user.setBlockedAt(null);
 
         appUserRepo.save(user);
-        log.info("Admin unbanned user: {}", user.getEmail());
+        eventService.track(
+                UserEventType.ADMIN_USER_UNBANNED,
+                user.getId(),
+                true,
+                "ADMIN",
+                null,
+                null,
+                null
+        );
     }
 }
