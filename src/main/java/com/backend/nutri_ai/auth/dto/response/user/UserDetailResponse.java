@@ -2,6 +2,7 @@ package com.backend.nutri_ai.auth.dto.response.user;
 
 import com.backend.nutri_ai.common.enums.ActivityLevel;
 import com.backend.nutri_ai.common.enums.Goal;
+import com.backend.nutri_ai.common.enums.MembershipType;
 import com.backend.nutri_ai.common.enums.Sex;
 import lombok.Builder;
 import lombok.Data;
@@ -17,6 +18,7 @@ public class UserDetailResponse {
     private String email;
     private String fullName;
     private boolean hasProfile; // Frontend dựa vào cờ này để redirect
+    private MembershipType membership;
     private ProfileDetail profile;
 
     @Data
