@@ -35,4 +35,7 @@ public interface IWorkoutService {
     WorkoutPlanResponse generateWorkoutPlan(UUID assessmentId);
 
     WorkoutPlanResponse getWorkoutPlan(UUID id);
+
+    // Completion tracking
+    void toggleWorkoutItemCompletion(UUID itemId);
 }
