@@ -13,7 +13,11 @@ import java.time.temporal.ChronoUnit;
 
 @Service
 public class MembershipService {
-    private UserEventService eventService;
+    private final UserEventService eventService; // Thêm final
+
+    public MembershipService(UserEventService eventService) {
+        this.eventService = eventService;
+    }
     @Transactional
     public void upgrade(AppUser user, Integer days) {
 

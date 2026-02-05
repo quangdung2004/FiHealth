@@ -38,6 +38,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
     }
 
     @Override
+    @Transactional
     public SubscriptionPlanResponse update(Long id, CreateOrUpdatePlanRequest request) {
         SubscriptionPlan plan = repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("PLAN_NOT_FOUND"));
@@ -50,6 +51,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
 
         return toResponse(plan);
     }
+
 
     @Override
     public void delete(Long id) {

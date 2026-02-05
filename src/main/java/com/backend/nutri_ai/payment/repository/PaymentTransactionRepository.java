@@ -21,6 +21,7 @@ public interface PaymentTransactionRepository
             PaymentStatus status,
             Instant time
     );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         select tx
@@ -29,4 +30,6 @@ public interface PaymentTransactionRepository
         where tx.orderCode = :orderCode
     """)
     Optional<PaymentTransaction> findByOrderCodeForUpdate(@Param("orderCode") String orderCode);
+
+
 }

@@ -29,6 +29,7 @@ public class PaymentTransaction {
     private Long amount;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "plan_type", length = 100)
     private PlanType planType;
 
     private Integer durationDays;
