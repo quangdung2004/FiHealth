@@ -9,20 +9,18 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface NutritionAssessmentRepository extends JpaRepository<NutritionAssessment, UUID> {
+
     Optional<NutritionAssessment> findFirstByUserIdOrderByCreatedAtDesc(UUID userId);
+
+    Optional<NutritionAssessment> findByIdAndUserId(UUID id, UUID userId);
 
     @Query("""
         select a from NutritionAssessment a
         left join fetch a.metrics m
-        where a.id = :id
+        where a.id = :id and a.user.id = :userId
     """)
-    Optional<NutritionAssessment> findByIdWithMetrics(@Param("id") UUID id);
-
-    @Query("""
- select a from NutritionAssessment a
- left join fetch a.metrics m
- where a.id = :id and a.user.id = :userId
-""")
-    Optional<NutritionAssessment> findByIdWithMetricsAndUserId(UUID id, UUID userId);
-
+    Optional<NutritionAssessment> findByIdWithMetricsAndUserId(
+            @Param("id") UUID id,
+            @Param("userId") UUID userId
+    );
 }
