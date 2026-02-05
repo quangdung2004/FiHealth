@@ -6,6 +6,7 @@ import com.backend.nutri_ai.auth.entity.AppUser;
 import com.backend.nutri_ai.catalog.entity.*;
 import com.backend.nutri_ai.catalog.repository.*;
 import com.backend.nutri_ai.plan.dto.CreateMealPlanFromTemplateRequest;
+import com.backend.nutri_ai.plan.dto.MealPlanDetailDto;
 import com.backend.nutri_ai.plan.dto.MealPlanDto;
 import com.backend.nutri_ai.plan.entity.*;
 import com.backend.nutri_ai.common.enums.MealType;
@@ -151,6 +152,16 @@ public class MealPlanService {
         return toDto(plan, favorite);
     }
 
+    @Transactional(readOnly = true)
+    public MealPlanDetailDto getPlanDetail(AppUser user, UUID planId) {
+        MealPlan plan = mealPlanRepo.findByIdAndUserId(planId, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Plan not found"));
+
+        boolean favorite = favoriteRepo.findByUserIdAndMealPlanId(user.getId(), planId).isPresent();
+        return toDetailDto(plan, favorite);
+    }
+
+
     @Transactional
     public Map<String, Object> toggleFavorite(AppUser user, UUID planId) {
         MealPlan plan = mealPlanRepo.findById(planId)
@@ -256,4 +267,24 @@ public class MealPlanService {
         dto.setDays(dayDtos);
         return dto;
     }
+    private MealPlanDetailDto toDetailDto(MealPlan plan, boolean favorite) {
+        MealPlanDetailDto dto = new MealPlanDetailDto();
+        dto.setId(plan.getId());
+        dto.setPeriod(plan.getPeriod());
+        dto.setStartDate(plan.getStartDate());
+        dto.setEndDate(plan.getEndDate());
+
+        dto.setTotalDays(plan.getTotalDays());
+        dto.setBudgetPerDayVnd(plan.getBudgetPerDayVnd());
+        dto.setEstimatedTotalCostVnd(plan.getEstimatedTotalCostVnd());
+
+        dto.setFavorite(favorite);
+
+        dto.setCreatedAt(plan.getCreatedAt());
+        dto.setUpdatedAt(plan.getUpdatedAt());
+        dto.setGoal(plan.getAssessment() != null ? plan.getAssessment().getGoal() : null);
+
+        return dto;
+    }
+
 }
