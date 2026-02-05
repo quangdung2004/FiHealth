@@ -63,4 +63,11 @@ public class WorkoutController {
     public ResponseEntity<ApiResponse<WorkoutPlanResponse>> getPlan(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.ok(workoutService.getWorkoutPlan(id)));
     }
+
+    @Operation(summary = "Toggle workout item completion")
+    @PutMapping("/items/{itemId}/toggle-complete")
+    public ResponseEntity<ApiResponse<String>> toggleItemCompletion(@PathVariable UUID itemId) {
+        workoutService.toggleWorkoutItemCompletion(itemId);
+        return ResponseEntity.ok(ApiResponse.ok("Workout item completion toggled"));
+    }
 }

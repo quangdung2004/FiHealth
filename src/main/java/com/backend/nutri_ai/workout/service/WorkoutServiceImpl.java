@@ -14,6 +14,7 @@ import com.backend.nutri_ai.workout.entity.WorkoutDay;
 import com.backend.nutri_ai.workout.entity.WorkoutItem;
 import com.backend.nutri_ai.workout.entity.WorkoutPlan;
 import com.backend.nutri_ai.workout.mapper.WorkoutMapper;
+import com.backend.nutri_ai.workout.repository.IWorkoutItemRepository;
 import com.backend.nutri_ai.workout.repository.IWorkoutPlanRepository;
 import com.backend.nutri_ai.workout.repository.WorkoutCatalogRepositoryImp;
 import com.backend.nutri_ai.common.exception.ResourceNotFoundException;
@@ -36,6 +37,7 @@ public class WorkoutServiceImpl implements IWorkoutService {
 
     private final WorkoutCatalogRepositoryImp catalogRepository;
     private final IWorkoutPlanRepository planRepository;
+    private final IWorkoutItemRepository itemRepository;
     private final NutritionAssessmentRepository assessmentRepository;
     private final WorkoutMapper mapper;
 
@@ -146,7 +148,6 @@ public class WorkoutServiceImpl implements IWorkoutService {
                 .map(mapper::toPlanResponse)
                 .collect(Collectors.toList());
     }
-
 
     private UUID getCurrentUserId() {
         String userIdString = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -283,6 +284,40 @@ public class WorkoutServiceImpl implements IWorkoutService {
                 item.setRestSec(60);
             }
             items.add(item);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void toggleWorkoutItemCompletion(UUID itemId) {
+        // 1. Find WorkoutItem
+        WorkoutItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Workout item not found with id: " + itemId));
+
+        // 2. Verify user ownership through WorkoutPlan
+        UUID currentUserId = getCurrentUserId();
+        WorkoutPlan plan = item.getWorkoutDay().getWorkoutPlan();
+
+        if (!plan.getUser().getId().equals(currentUserId)) {
+            throw new ResourceNotFoundException("You don't have permission to modify this workout item");
+        }
+
+        // 3. Toggle completed status
+        item.setCompleted(!item.getCompleted());
+        itemRepository.save(item);
+
+        log.info("Toggled workout item {} completion to: {}", itemId, item.getCompleted());
+
+        // 4. Check if all items in the plan are completed
+        boolean allCompleted = plan.getDays().stream()
+                .flatMap(day -> day.getItems().stream())
+                .allMatch(WorkoutItem::getCompleted);
+
+        // 5. If all completed, update plan status to COMPLETED
+        if (allCompleted && "ACTIVE".equals(plan.getStatus())) {
+            plan.setStatus("COMPLETED");
+            planRepository.save(plan);
+            log.info("Workout plan {} marked as COMPLETED", plan.getId());
         }
     }
 }
