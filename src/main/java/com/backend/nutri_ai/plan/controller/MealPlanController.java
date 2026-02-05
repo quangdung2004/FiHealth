@@ -4,6 +4,7 @@ import com.backend.nutri_ai.auth.entity.AppUser;
 import com.backend.nutri_ai.auth.repository.AppUserRepository;
 import com.backend.nutri_ai.common.enums.PlanPeriod;
 import com.backend.nutri_ai.plan.dto.CreateMealPlanFromTemplateRequest;
+import com.backend.nutri_ai.plan.dto.MealPlanDetailDto;
 import com.backend.nutri_ai.plan.dto.MealPlanDto;
 import com.backend.nutri_ai.plan.service.MealPlanService;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,13 @@ public class MealPlanController {
         AppUser user = currentUser(principal);
         return mealPlanService.getPlan(user, id);
     }
+
+    @GetMapping("/{id}/detail")
+    public MealPlanDetailDto getDetail(@PathVariable UUID id, Principal principal) {
+        AppUser user = currentUser(principal);
+        return mealPlanService.getPlanDetail(user, id);
+    }
+
 
     @PostMapping("/{id}/favorite")
     public Map<String, Object> toggleFavorite(@PathVariable UUID id, Principal principal) {

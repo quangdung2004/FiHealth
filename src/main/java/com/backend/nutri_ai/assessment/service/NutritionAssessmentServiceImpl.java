@@ -8,6 +8,9 @@ import com.backend.nutri_ai.assessment.mapper.NutritionAssessmentMapper;
 import com.backend.nutri_ai.assessment.repository.BodyMetricsSnapshotRepo;
 import com.backend.nutri_ai.assessment.repository.NutritionAssessmentRepo;
 import com.backend.nutri_ai.auth.entity.AppUser;
+import com.backend.nutri_ai.auth.entity.UserProfile;
+import com.backend.nutri_ai.auth.repository.UserProfileRepo;
+import com.backend.nutri_ai.common.exception.ResourceNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,16 +24,19 @@ public class NutritionAssessmentServiceImpl implements NutritionAssessmentServic
 
     private final NutritionAssessmentRepo assessmentRepo;
     private final BodyMetricsSnapshotRepo metricsRepo; // có thể không dùng nếu cascade
+    private final UserProfileRepo userProfileRepo;
 
     @Override
     @Transactional
     public NutritionAssessmentResponse createFullAssessment(AppUser user, CreateAssessmentRequest request) {
         // validate như bạn đã làm (giữ nguyên)
-
-        double heightM = request.getHeightCm() / 100.0;
+        UserProfile profile = userProfileRepo.findByUser_Id(user.getId()).orElseThrow(
+                ()-> new ResourceNotFoundException("User profile khong ton tai")
+        );
+        double heightM = profile.getHeightCm() / 100.0;
         double bmi = request.getWeightKg() / (heightM * heightM);
 
-        double bmr = calcBmr(request.getSex(), request.getWeightKg(), request.getHeightCm(), request.getAge());
+        double bmr = calcBmr(profile.getSex(), request.getWeightKg(), profile.getHeightCm(), profile.getAge());
         double tdee = bmr * activityFactor(request.getActivityLevel());
         double calorieTarget = calcCalorieTarget(tdee, request.getGoal(), request.getTargetKgPerWeek());
 
@@ -42,9 +48,9 @@ public class NutritionAssessmentServiceImpl implements NutritionAssessmentServic
         NutritionAssessment assessment = new NutritionAssessment();
         assessment.setUser(user);
 
-        assessment.setSex(request.getSex());
-        assessment.setAge(request.getAge());
-        assessment.setHeightCm(request.getHeightCm());
+        assessment.setSex(profile.getSex());
+        assessment.setAge(profile.getAge());
+        assessment.setHeightCm(profile.getHeightCm());
         assessment.setWeightKg(request.getWeightKg());
         assessment.setActivityLevel(request.getActivityLevel());
         assessment.setGoal(request.getGoal());
@@ -53,7 +59,11 @@ public class NutritionAssessmentServiceImpl implements NutritionAssessmentServic
         assessment.setMealsPerDay(request.getMealsPerDay() != null ? request.getMealsPerDay() : 3);
         assessment.setBudgetPerDayVnd(request.getBudgetPerDayVnd());
         assessment.setNotes(request.getNotes());
-        assessment.setAllergies(request.getAllergies());
+        if (profile.getAllergies() != null && !profile.getAllergies().isEmpty()) {
+            assessment.setAllergies(String.join(", ", profile.getAllergies()));
+        } else {
+            assessment.setAllergies(null);
+        }
 
         BodyMetricsSnapshot metrics = new BodyMetricsSnapshot();
         metrics.setBmi(round2(bmi));

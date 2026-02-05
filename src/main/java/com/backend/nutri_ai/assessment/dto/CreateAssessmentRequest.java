@@ -9,10 +9,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class CreateAssessmentRequest {
-
-    private Sex sex;
-    private Integer age;
-    private Integer heightCm;
     private Double weightKg;
 
     private ActivityLevel activityLevel;
@@ -23,6 +19,6 @@ public class CreateAssessmentRequest {
     private Integer mealsPerDay;
     private Integer budgetPerDayVnd;
 
-    private String allergies;
     private String notes;
 }
+

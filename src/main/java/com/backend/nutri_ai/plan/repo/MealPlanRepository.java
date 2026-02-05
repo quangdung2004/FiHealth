@@ -18,4 +18,5 @@ public interface MealPlanRepository extends JpaRepository<MealPlan, UUID> {
     })
     Optional<MealPlan> findByIdAndUserId(UUID id, UUID userId);
 
+
 }
