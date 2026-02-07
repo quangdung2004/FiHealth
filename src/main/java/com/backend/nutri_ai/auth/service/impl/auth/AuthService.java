@@ -81,11 +81,9 @@ public class AuthService implements IAuthService {
     }
 
     /* ================= REGISTER ================= */
-
-    /* ================= REGISTER ================= */
     public void register(RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
+            throw new UserNotFoundException("Email already exists");
         }
 
         rateLimitOtp(request.getEmail());
