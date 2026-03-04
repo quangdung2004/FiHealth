@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 @Profile({"dev", "default"})
 public class DevUserSeeder implements CommandLineRunner {
 
-    public static final String DEV_EMAIL = "dev@gmail.com";
+    public static final String DEV_EMAIL = "dev1@gmail.com";
     private static final String DEV_PASSWORD = "dev123"; // plain
 
     private final PasswordEncoder passwordEncoder;
