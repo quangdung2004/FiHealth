@@ -30,7 +30,7 @@ public class DevUserSeeder implements CommandLineRunner {
         dev.setEmail(DEV_EMAIL);
         dev.setFullName("Dev User");
         dev.setPasswordHash(passwordEncoder.encode(DEV_PASSWORD));
-        dev.setRole(UserRole.USER);        // hoặc ADMIN nếu muốn
+        dev.setRole(UserRole.ADMIN);        // hoặc ADMIN nếu muốn
         dev.setStatus(UserStatus.ACTIVE);
         dev.setBlockedReason(null);
 

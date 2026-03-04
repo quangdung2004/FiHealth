@@ -73,6 +73,6 @@ payos:
   api-key: "1f111335-958b-4ec0-8ab7-e2957629e37e"
   checksum-key: "2dd3030eec8e3c738a41fec86e49774663b7223898954749334232cb15b50273"
   return-url:
-  webhook-url: "https://7b56-2a09-bac5-d459-263c-00-3cf-16.ngrok-free.app/api/webhook/payos"
+  webhook-url: "https://fihealth.site/api/webhook/payos"
 
 
