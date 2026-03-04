@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-@Profile({"dev", "default"})
+@Profile({"dev","default","prod"})
 public class DevUserSeeder implements CommandLineRunner {
 
     public static final String DEV_EMAIL = "dev1@gmail.com";
