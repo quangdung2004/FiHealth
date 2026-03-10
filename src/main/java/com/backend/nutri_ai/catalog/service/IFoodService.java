@@ -1,9 +1,11 @@
 package com.backend.nutri_ai.catalog.service;
 
+import com.backend.nutri_ai.catalog.dto.imports.FoodImportResult;
 import com.backend.nutri_ai.catalog.dto.request.FoodRequest;
 import com.backend.nutri_ai.catalog.dto.response.FoodResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
@@ -16,6 +18,8 @@ public interface IFoodService {
     FoodResponse createFood(FoodRequest request);
 
     FoodResponse updateFood(UUID id, FoodRequest request);
+
+    FoodImportResult importFoodsFromExcel(MultipartFile file);
 
     void deleteFood(UUID id);
 }

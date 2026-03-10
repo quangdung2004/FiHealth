@@ -7,16 +7,16 @@ import com.backend.nutri_ai.catalog.dto.response.RecipeResponse;
 import com.backend.nutri_ai.catalog.entity.FoodItem;
 import com.backend.nutri_ai.catalog.entity.Recipe;
 import com.backend.nutri_ai.catalog.entity.RecipeIngredient;
+import com.backend.nutri_ai.catalog.util.CatalogTagUtils;
+import com.backend.nutri_ai.common.enums.CatalogTag;
 import org.springframework.stereotype.Component;
 
 import java.time.ZoneId;
-import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
 public class RecipeMapper {
 
-    // ========= Entity -> Response =========
     public RecipeResponse toResponse(Recipe recipe) {
         if (recipe == null) return null;
 
@@ -30,6 +30,7 @@ public class RecipeMapper {
         response.setCarbG(recipe.getCarbG());
         response.setEstimatedCostVnd(recipe.getEstimatedCostVnd());
         response.setTags(recipe.getTags());
+        response.setTagEnums(CatalogTag.fromCsv(recipe.getTags()));
         response.setActive(recipe.getActive());
 
         response.setCreatedAt(recipe.getCreatedAt() != null
@@ -51,7 +52,6 @@ public class RecipeMapper {
         return response;
     }
 
-    // ========= Request -> Entity =========
     public void updateEntity(Recipe recipe, RecipeRequest request) {
         recipe.setName(request.getName());
         recipe.setDescription(request.getDescription());
@@ -60,14 +60,13 @@ public class RecipeMapper {
         recipe.setFatG(request.getFatG());
         recipe.setCarbG(request.getCarbG());
         recipe.setEstimatedCostVnd(request.getEstimatedCostVnd());
-        recipe.setTags(request.getTags());
+        recipe.setTags(CatalogTagUtils.normalizeTags(request.getTags(), request.getTagEnums()));
 
         if (request.getActive() != null) {
             recipe.setActive(request.getActive());
         }
     }
 
-    // ========= Ingredient mapping =========
     private RecipeIngredientResponse toIngredientResponse(RecipeIngredient ingredient) {
         RecipeIngredientResponse response = new RecipeIngredientResponse();
         response.setId(ingredient.getId());

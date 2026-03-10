@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -26,6 +27,8 @@ public interface IFoodRepository extends JpaRepository<FoodItem, UUID> {
         Page<FoodItem> findByNameOrTagsContaining(@Param("q") String query, Pageable pageable);
 
         boolean existsByName(String name);
+
+        Optional<FoodItem> findByNameIgnoreCase(String name);
 
     boolean existsByNameAndIdNot(String name, UUID id);
 }

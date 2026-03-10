@@ -3,8 +3,10 @@ package com.backend.nutri_ai.catalog.mapper;
 import com.backend.nutri_ai.catalog.dto.request.FoodRequest;
 import com.backend.nutri_ai.catalog.dto.response.AllergenSimpleResponse;
 import com.backend.nutri_ai.catalog.dto.response.FoodResponse;
-import com.backend.nutri_ai.catalog.entity.FoodItem;
 import com.backend.nutri_ai.catalog.entity.FoodAllergen;
+import com.backend.nutri_ai.catalog.entity.FoodItem;
+import com.backend.nutri_ai.catalog.util.CatalogTagUtils;
+import com.backend.nutri_ai.common.enums.CatalogTag;
 import org.springframework.stereotype.Component;
 
 import java.time.ZoneId;
@@ -14,7 +16,6 @@ import java.util.stream.Collectors;
 @Component
 public class FoodMapper {
 
-    // ===== Entity -> Response =====
     public FoodResponse toResponse(FoodItem food) {
         if (food == null) return null;
 
@@ -29,6 +30,7 @@ public class FoodMapper {
         response.setCarbG(food.getCarbG());
         response.setEstimatedPriceVndPerServing(food.getEstimatedPriceVndPerServing());
         response.setTags(food.getTags());
+        response.setTagEnums(CatalogTag.fromCsv(food.getTags()));
         response.setActive(food.getActive());
 
         response.setCreatedAt(food.getCreatedAt() != null
@@ -40,18 +42,15 @@ public class FoodMapper {
                 : null);
 
         response.setAllergens(mapAllergens(food.getAllergens()));
-
         return response;
     }
 
-    // ===== Request -> Entity (CREATE) =====
     public FoodItem toEntity(FoodRequest request) {
         FoodItem food = new FoodItem();
         updateEntity(food, request);
         return food;
     }
 
-    // ===== Request -> Entity (UPDATE) =====
     public void updateEntity(FoodItem food, FoodRequest request) {
         food.setName(request.getName());
         food.setBrand(request.getBrand());
@@ -61,14 +60,13 @@ public class FoodMapper {
         food.setFatG(request.getFatG());
         food.setCarbG(request.getCarbG());
         food.setEstimatedPriceVndPerServing(request.getEstimatedPriceVndPerServing());
-        food.setTags(request.getTags());
+        food.setTags(CatalogTagUtils.normalizeTags(request.getTags(), request.getTagEnums()));
 
         if (request.getActive() != null) {
             food.setActive(request.getActive());
         }
     }
 
-    // ===== Allergen mapping =====
     private Set<AllergenSimpleResponse> mapAllergens(Set<FoodAllergen> allergens) {
         if (allergens == null) return null;
 

@@ -1,8 +1,10 @@
 package com.backend.nutri_ai.catalog.dto.response;
 
+import com.backend.nutri_ai.common.enums.CatalogTag;
 import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Data
@@ -16,12 +18,10 @@ public class RecipeResponse {
     private Integer carbG;
     private Integer estimatedCostVnd;
     private String tags;
+    private Set<CatalogTag> tagEnums;
     private Boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     private List<RecipeIngredientResponse> ingredients;
 }
-
-
-

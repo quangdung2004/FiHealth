@@ -1,5 +1,6 @@
 package com.backend.nutri_ai.catalog.dto.request;
 
+import com.backend.nutri_ai.common.enums.CatalogTag;
 import lombok.Data;
 import jakarta.validation.constraints.*;
 
@@ -41,6 +42,8 @@ public class FoodRequest {
 
     @Size(max = 500, message = "Tags must be less than 500 characters")
     private String tags;
+
+    private Set<CatalogTag> tagEnums;
 
     private Boolean active = true;
 
