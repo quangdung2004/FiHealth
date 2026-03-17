@@ -1,5 +1,10 @@
 server:
-  port: 8082
+  port: 8085
+
+app:
+  storage:
+    local-dir: ./uploads
+
 spring:
   datasource:
     url: jdbc:mysql://localhost:3307/nutrition?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Bangkok
@@ -15,29 +20,59 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
 
-  redis:
-    host: localhost
-    port: 6379
-    timeout: 60000
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
 
+  ai:
+    openai:
+      api-key: ${OPENROUTER_API_KEY}
+      # KHÔNG để /v1 ở đây, vì client sẽ tự append /v1/...
+      base-url: https://openrouter.ai/api
+      chat:
+        options:
+          model: openai/gpt-4o-mini
   mail:
     host: smtp.gmail.com
     port: 587
-    username: your_email@gmail.com
-    password: your_app_password
+    username: fiheathtrolidinhduong@gmail.com
+    password: "tvoklrtdxyhwqxit"
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: nutrition # Thêm mật khẩu vào đây
+      timeout: 60000
+      lettuce:
+        client-options:
+          protocol-version: RESP2 # Thêm dòng này nếu vẫn bị lỗi HELLO sau khi nhập pass
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
 
 logging:
   level:
     org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: trace
+
 jwt:
   secret: a1b31e357b84889fbccfe46570e46aa3bcd90455b308e3eb65f3f5f4b7dde504
   access-token-expiration: 3600000      # Đã sửa từ 'expire' thành 'expiration'
   refresh-token-expiration: 604800000   # Mình khuyên sửa luôn cái này cho đồng bộ, kiểm tra lại code Java xem nó gọi tên là gì  # 7 days
+payos:
+  client-id: "e9e21b99-38c9-4f64-aaeb-d87d3cbf420d"
+  api-key: "1f111335-958b-4ec0-8ab7-e2957629e37e"
+  checksum-key: "2dd3030eec8e3c738a41fec86e49774663b7223898954749334232cb15b50273"
+  return-url:
+  webhook-url: "https://fihealth.site/api/webhook/payos"
 
 

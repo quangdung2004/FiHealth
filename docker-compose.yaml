@@ -1,25 +1,77 @@
+name: fihealth
+
 services:
   mysql:
     image: mysql:8.4
     container_name: nutrition_mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
     environment:
       MYSQL_DATABASE: nutrition
       MYSQL_USER: nutrition
       MYSQL_PASSWORD: nutrition
-      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_ROOT_PASSWORD: "123456"
     ports:
       - "3307:3306"
-    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
     volumes:
       - mysqldata:/var/lib/mysql
+    restart: always
 
   adminer:
     image: adminer:4
     container_name: nutrition_adminer
-    ports:
-      - "8081:8080"
     depends_on:
       - mysql
+    ports:
+      - "8081:8080"
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: fihealth_redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: fihealth_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: fihealth
+      RABBITMQ_DEFAULT_PASS: fihealth
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: always
+
+  be:
+    image: quangdung0902/fihealth-be:latest
+    container_name: fihealth_backend
+    depends_on:
+      - mysql
+      - redis
+      - rabbitmq
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      # DB (host = mysql)
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/nutrition?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: nutrition
+      SPRING_DATASOURCE_PASSWORD: nutrition
+
+      # Redis (host = redis)
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+
+      # RabbitMQ (host = rabbitmq)
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: fihealth
+      SPRING_RABBITMQ_PASSWORD: fihealth
+    restart: always
 
 volumes:
   mysqldata:

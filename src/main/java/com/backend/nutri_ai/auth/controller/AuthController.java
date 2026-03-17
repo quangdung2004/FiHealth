@@ -4,7 +4,7 @@ package com.backend.nutri_ai.auth.controller;
 
 import com.backend.nutri_ai.auth.dto.request.Auth.*;
 import com.backend.nutri_ai.auth.dto.response.ApiResponse;
-import com.backend.nutri_ai.auth.dto.response.AuthResponse;
+import com.backend.nutri_ai.auth.dto.response.auth.AuthResponse;
 
 import com.backend.nutri_ai.auth.service.inf.auth.IAuthService;
 import jakarta.validation.Valid;

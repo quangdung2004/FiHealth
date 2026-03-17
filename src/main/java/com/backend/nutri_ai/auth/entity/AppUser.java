@@ -1,6 +1,7 @@
 package com.backend.nutri_ai.auth.entity;
 
 import com.backend.nutri_ai.common.BaseEntity;
+import com.backend.nutri_ai.common.enums.MembershipType;
 import com.backend.nutri_ai.common.enums.UserRole;
 import com.backend.nutri_ai.common.enums.UserStatus;
 import jakarta.persistence.*;
@@ -30,12 +31,19 @@ import java.time.Instant;
     @Column(nullable=false, length=20)
     private UserStatus status = UserStatus.ACTIVE;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private MembershipType membership = MembershipType.FREE;
+    private Instant premiumExpiredAt;
     private Instant lastLoginAt;
 
     @Column(length=300)
     private String blockedReason;
-
+    @Column(nullable = false)
+    private Integer tokenVersion = 0;
     @OneToOne(mappedBy="user", cascade=CascadeType.ALL, orphanRemoval=true, fetch=FetchType.LAZY)
     private UserProfile profile;
+    @Column
+    private Instant blockedAt;
 }
 

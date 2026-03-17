@@ -1,0 +1,154 @@
+package com.backend.nutri_ai.assessment.service;
+
+import com.backend.nutri_ai.assessment.dto.CreateAssessmentRequest;
+import com.backend.nutri_ai.assessment.dto.NutritionAssessmentResponse;
+import com.backend.nutri_ai.assessment.entity.BodyMetricsSnapshot;
+import com.backend.nutri_ai.assessment.entity.NutritionAssessment;
+import com.backend.nutri_ai.assessment.mapper.NutritionAssessmentMapper;
+import com.backend.nutri_ai.assessment.repository.BodyMetricsSnapshotRepo;
+import com.backend.nutri_ai.assessment.repository.NutritionAssessmentRepo;
+import com.backend.nutri_ai.auth.entity.AppUser;
+import com.backend.nutri_ai.auth.entity.UserProfile;
+import com.backend.nutri_ai.auth.repository.UserProfileRepo;
+import com.backend.nutri_ai.common.exception.ResourceNotFoundException;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class NutritionAssessmentServiceImpl implements NutritionAssessmentService {
+
+    private final NutritionAssessmentRepo assessmentRepo;
+    private final BodyMetricsSnapshotRepo metricsRepo; // có thể không dùng nếu cascade
+    private final UserProfileRepo userProfileRepo;
+
+    @Override
+    @Transactional
+    public NutritionAssessmentResponse createFullAssessment(AppUser user, CreateAssessmentRequest request) {
+        // validate như bạn đã làm (giữ nguyên)
+        UserProfile profile = userProfileRepo.findByUser_Id(user.getId()).orElseThrow(
+                ()-> new ResourceNotFoundException("User profile khong ton tai")
+        );
+        double heightM = profile.getHeightCm() / 100.0;
+        double bmi = request.getWeightKg() / (heightM * heightM);
+
+        double bmr = calcBmr(profile.getSex(), request.getWeightKg(), profile.getHeightCm(), profile.getAge());
+        double tdee = bmr * activityFactor(request.getActivityLevel());
+        double calorieTarget = calcCalorieTarget(tdee, request.getGoal(), request.getTargetKgPerWeek());
+
+        double proteinG = 1.6 * request.getWeightKg();
+        double fatG = 0.8 * request.getWeightKg();
+        double remaining = calorieTarget - (proteinG * 4 + fatG * 9);
+        double carbG = Math.max(0, remaining / 4);
+
+        NutritionAssessment assessment = new NutritionAssessment();
+        assessment.setUser(user);
+
+        assessment.setSex(profile.getSex());
+        assessment.setAge(profile.getAge());
+        assessment.setHeightCm(profile.getHeightCm());
+        assessment.setWeightKg(request.getWeightKg());
+        assessment.setActivityLevel(request.getActivityLevel());
+        assessment.setGoal(request.getGoal());
+
+        assessment.setTargetKgPerWeek(request.getTargetKgPerWeek());
+        assessment.setMealsPerDay(request.getMealsPerDay() != null ? request.getMealsPerDay() : 3);
+        assessment.setBudgetPerDayVnd(request.getBudgetPerDayVnd());
+        assessment.setNotes(request.getNotes());
+        if (profile.getAllergies() != null && !profile.getAllergies().isEmpty()) {
+            assessment.setAllergies(String.join(", ", profile.getAllergies()));
+        } else {
+            assessment.setAllergies(null);
+        }
+
+        BodyMetricsSnapshot metrics = new BodyMetricsSnapshot();
+        metrics.setBmi(round2(bmi));
+        metrics.setBmr(round0(bmr));
+        metrics.setTdee(round0(tdee));
+        metrics.setCalorieTarget(round0(calorieTarget));
+        metrics.setProteinG(round0(proteinG));
+        metrics.setFatG(round0(fatG));
+        metrics.setCarbG(round0(carbG));
+
+        metrics.setAssessment(assessment);
+        assessment.setMetrics(metrics);
+
+        NutritionAssessment saved = assessmentRepo.save(assessment);
+
+        return NutritionAssessmentMapper.toResponse(saved);
+    }
+
+    @Override
+    public List<NutritionAssessmentResponse> getMyAssessments(AppUser user) {
+        if (user == null) throw new IllegalArgumentException("user is required");
+        return assessmentRepo.findByUser_IdOrderByCreatedAtDesc(user.getId())
+                .stream()
+                .map(NutritionAssessmentMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public NutritionAssessmentResponse getById(UUID id, AppUser user) {
+        NutritionAssessment a = assessmentRepo.findByIdAndUser_Id(id, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Assessment not found"));
+        return NutritionAssessmentMapper.toResponse(a);
+    }
+
+    private double calcBmr(Enum<?> sex, double weightKg, int heightCm, int age) {
+        // Vì enum Sex của bạn có thể là MALE/FEMALE, mình xử lý theo name()
+        String s = sex.name().toUpperCase();
+        double base = 10 * weightKg + 6.25 * heightCm - 5 * age;
+        if (s.contains("FEMALE") || s.contains("WOMAN") || s.contains("NU")) {
+            return base - 161;
+        }
+        // mặc định coi là male
+        return base + 5;
+    }
+
+    private double activityFactor(Enum<?> activityLevel) {
+        String a = activityLevel.name().toUpperCase();
+        // bạn map theo enum của bạn (VD: SEDENTARY/LIGHT/MODERATE/ACTIVE/VERY_ACTIVE)
+        if (a.contains("SEDENTARY") || a.contains("LOW")) return 1.2;
+        if (a.contains("LIGHT")) return 1.375;
+        if (a.contains("MODERATE") || a.contains("MEDIUM")) return 1.55;
+        if (a.contains("ACTIVE")) return 1.725;
+        if (a.contains("VERY")) return 1.9;
+        return 1.55; // default
+    }
+
+    private double calcCalorieTarget(double tdee, Enum<?> goal, Double targetKgPerWeek) {
+        String g = goal.name().toUpperCase();
+
+        // nếu có targetKgPerWeek: 1 kg ~ 7700 kcal => /7 ngày
+        if (targetKgPerWeek != null && targetKgPerWeek != 0) {
+            double dailyDelta = (targetKgPerWeek * 7700.0) / 7.0;
+            // giảm cân => targetKgPerWeek âm? hay dương? tuỳ bạn nhập
+            // Mình xử lý: nếu goal là LOSE thì trừ, GAIN thì cộng
+            if (g.contains("LOSE") || g.contains("CUT") || g.contains("GIAM")) {
+                return tdee - Math.abs(dailyDelta);
+            }
+            if (g.contains("GAIN") || g.contains("BULK") || g.contains("TANG")) {
+                return tdee + Math.abs(dailyDelta);
+            }
+        }
+
+        // không có targetKgPerWeek thì dùng preset nhẹ nhàng
+        if (g.contains("LOSE") || g.contains("CUT") || g.contains("GIAM")) return tdee - 400;
+        if (g.contains("GAIN") || g.contains("BULK") || g.contains("TANG")) return tdee + 300;
+
+        // maintain
+        return tdee;
+    }
+
+    private double round2(double v) {
+        return Math.round(v * 100.0) / 100.0;
+    }
+
+    private int round0(double v) {
+        return (int) Math.round(v);
+    }
+}

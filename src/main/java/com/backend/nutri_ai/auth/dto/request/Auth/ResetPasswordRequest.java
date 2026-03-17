@@ -14,7 +14,4 @@ public class ResetPasswordRequest {
 
     @NotBlank
     private String otp;
-
-    @Size(min = 6)
-    private String newPassword;
 }
